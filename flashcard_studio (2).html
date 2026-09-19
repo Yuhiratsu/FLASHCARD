@@ -1,0 +1,3110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>FlashMaster Pro - Mobile & AI Flashcard Studio with Font Customizer</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <!-- QRCode.js CDN for live QR code generation -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+  
+  <!-- Google Fonts: Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    :root {
+      --bg-main: #0b1120;
+      --bg-gradient: radial-gradient(circle at 15% 15%, #1e1b4b 0%, #0b1120 75%);
+      --card-front-bg: #1e293b;
+      --card-back-bg: #312e81;
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-text-front: #f8fafc;
+      --card-text-back: #ffffff;
+      --accent-color: #6366f1;
+      --accent-hover: #4f46e5;
+      
+      /* Dynamic Font Scaling System */
+      --card-font-size: 18px;
+      --card-line-height: 1.45;
+      --study-font-size: 24px;
+      --study-line-height: 1.4;
+    }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: var(--bg-gradient);
+      min-height: 100vh;
+      color: #f8fafc;
+      transition: background 0.4s ease;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    .pb-safe {
+      padding-bottom: calc(env(safe-area-inset-bottom, 16px) + 4.5rem);
+    }
+
+    /* 3D Perspective Flip Engine */
+    .perspective-container {
+      perspective: 1200px;
+    }
+
+    .flip-card-inner {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      text-align: left;
+      transition: transform 0.55s cubic-bezier(0.4, 0, 0.2, 1);
+      transform-style: preserve-3d;
+    }
+
+    .flip-card-inner.is-flipped {
+      transform: rotateY(180deg);
+    }
+
+    .flip-card-front,
+    .flip-card-back {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      -webkit-backface-visibility: hidden;
+      backface-visibility: hidden;
+      border-radius: 1.25rem;
+      border: 1px solid var(--card-border);
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.35), 0 8px 10px -6px rgba(0, 0, 0, 0.2);
+    }
+
+    .flip-card-front {
+      background-color: var(--card-front-bg);
+      color: var(--card-text-front);
+    }
+
+    .flip-card-back {
+      background-color: var(--card-back-bg);
+      color: var(--card-text-back);
+      transform: rotateY(180deg);
+    }
+
+    /* Card Dynamic Font Sizing Application */
+    .dynamic-card-text {
+      font-size: var(--card-font-size);
+      line-height: var(--card-line-height);
+    }
+
+    .dynamic-study-text {
+      font-size: var(--study-font-size);
+      line-height: var(--study-line-height);
+    }
+
+    /* Subtle custom scrollbars for cards with enlarged fonts */
+    .custom-card-scroll::-webkit-scrollbar {
+      width: 4px;
+    }
+    .custom-card-scroll::-webkit-scrollbar-track {
+      background: rgba(0, 0, 0, 0.1);
+    }
+    .custom-card-scroll::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+
+    .shimmer-btn {
+      position: relative;
+      overflow: hidden;
+    }
+    .shimmer-btn::after {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: linear-gradient(60deg, transparent, rgba(255, 255, 255, 0.15), transparent);
+      transform: rotate(30deg);
+      transition: transform 0.7s;
+    }
+    .shimmer-btn:hover::after {
+      transform: rotate(30deg) translate(50%, 50%);
+    }
+
+    @keyframes pulse-scan {
+      0% { transform: translateY(-100%); opacity: 0.2; }
+      50% { opacity: 0.8; }
+      100% { transform: translateY(100%); opacity: 0.2; }
+    }
+    .scan-line {
+      animation: pulse-scan 2.2s ease-in-out infinite;
+    }
+
+    .swipe-left {
+      transform: translateX(-45px) rotate(-4deg);
+      opacity: 0.7;
+    }
+    .swipe-right {
+      transform: translateX(45px) rotate(4deg);
+      opacity: 0.7;
+    }
+  </style>
+</head>
+<body class="flex flex-col min-h-screen antialiased selection:bg-indigo-500 selection:text-white pb-safe md:pb-0">
+
+  <header class="sticky top-0 z-40 backdrop-blur-md bg-black/60 border-b border-white/10 px-3 sm:px-6 py-2.5 transition-colors duration-300">
+    <div class="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-2.5">
+      
+      <!-- Top Row: Brand & Quick Action Icons -->
+      <div class="flex items-center justify-between w-full md:w-auto">
+        <div class="flex items-center space-x-2.5 cursor-pointer" onclick="switchView('grid')">
+          <div class="p-2 rounded-xl bg-gradient-to-tr from-indigo-600 via-violet-600 to-fuchsia-500 shadow-lg shadow-indigo-500/30 text-white">
+            <i data-lucide="sparkles" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+              FlashMaster <span class="text-[10px] sm:text-xs px-1.5 py-0.5 rounded-full bg-gradient-to-r from-indigo-500 to-purple-500 text-white font-semibold">STUDIO</span>
+            </h1>
+            <p class="text-[11px] text-slate-400 hidden sm:block">AI Scanner, Multi-Deck & Dynamic Font Scaling</p>
+          </div>
+        </div>
+
+        <!-- Mobile Header Quick Controls -->
+        <div class="flex items-center space-x-1 md:hidden">
+          <button onclick="openFontModal()" class="p-2 rounded-lg bg-indigo-600/30 border border-indigo-500/40 text-indigo-200 font-bold text-xs flex items-center gap-1" title="Customize Font Size">
+            <span class="text-xs font-extrabold">Aa</span>
+            <span id="mobile-nav-font-label" class="text-[10px] opacity-80">18px</span>
+          </button>
+          <button onclick="openShareModal()" class="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300" title="Share Deck">
+            <i data-lucide="share-2" class="w-4 h-4"></i>
+          </button>
+          <button onclick="toggleAudio()" id="mobile-sound-btn" class="p-2 rounded-lg bg-white/5 border border-white/10 text-slate-300" title="Toggle Sound">
+            <i data-lucide="volume-2" class="w-4 h-4"></i>
+          </button>
+          <button onclick="openCardModal()" class="p-2 rounded-lg bg-indigo-600 text-white" title="New Card">
+            <i data-lucide="plus" class="w-4 h-4"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="flex items-center bg-black/60 p-1 rounded-xl border border-white/10 w-full sm:w-auto justify-center">
+        <button id="view-tab-grid" onclick="switchView('grid')" class="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-indigo-600 text-white shadow-md">
+          <i data-lucide="layout-grid" class="w-3.5 h-3.5"></i>
+          <span>Cards Grid</span>
+        </button>
+        <button id="view-tab-study" onclick="switchView('study')" class="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 text-slate-400 hover:text-white">
+          <i data-lucide="play-circle" class="w-3.5 h-3.5"></i>
+          <span>Study Mode</span>
+        </button>
+        <button id="view-tab-scan" onclick="switchView('scan')" class="flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 text-purple-400 hover:text-purple-300">
+          <i data-lucide="camera" class="w-3.5 h-3.5 text-purple-400"></i>
+          <span class="relative">
+            AI Scanner
+            <span class="absolute -top-1 -right-1.5 w-1.5 h-1.5 bg-purple-400 rounded-full animate-ping"></span>
+          </span>
+        </button>
+      </div>
+
+      <div class="hidden md:flex items-center space-x-2">
+        
+        <!-- Primary Font Size Stepper & Popover Opener in Header -->
+        <div class="flex items-center bg-black/40 border border-indigo-500/30 rounded-xl p-1 shadow-sm">
+          <button onclick="stepFontSize(-2)" class="px-2 py-1 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors" title="Decrease Font Size (A-)">
+            A-
+          </button>
+          <button onclick="openFontModal()" class="flex items-center space-x-1 px-2.5 py-1 bg-indigo-600/20 hover:bg-indigo-600/40 text-indigo-200 rounded-lg text-xs font-semibold transition-colors" title="Open Font Size Customizer">
+            <span class="font-extrabold text-xs">Aa</span>
+            <span id="nav-font-size-label" class="font-mono text-[11px] text-indigo-300">18px</span>
+          </button>
+          <button onclick="stepFontSize(2)" class="px-2 py-1 hover:bg-white/10 text-slate-300 hover:text-white rounded-lg text-xs font-bold transition-colors" title="Increase Font Size (A+)">
+            A+
+          </button>
+        </div>
+
+        <!-- Share & Export Button -->
+        <button onclick="openShareModal()" class="flex items-center space-x-1.5 px-3 py-2 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-200 text-xs font-semibold transition-colors" title="Export & Share Deck">
+          <i data-lucide="share-2" class="w-3.5 h-3.5 text-indigo-400"></i>
+          <span>Share</span>
+        </button>
+
+        <!-- Import Button -->
+        <button onclick="openImportModal()" class="flex items-center space-x-1.5 px-2.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 text-xs font-semibold transition-colors" title="Import JSON / CSV">
+          <i data-lucide="upload" class="w-3.5 h-3.5"></i>
+          <span>Import</span>
+        </button>
+
+        <!-- Sound Toggle -->
+        <button id="sound-btn" onclick="toggleAudio()" title="Sound Effects Toggle" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+          <i data-lucide="volume-2" class="w-4 h-4"></i>
+        </button>
+
+        <!-- Theme Switcher -->
+        <button onclick="openThemeModal()" title="Theme & Color Customizer" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+          <i data-lucide="palette" class="w-4 h-4 text-indigo-400"></i>
+        </button>
+
+        <!-- Settings Modal (API Key) -->
+        <button onclick="openSettingsModal()" title="Gemini API Settings" class="p-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+          <i data-lucide="settings" class="w-4 h-4 text-slate-300"></i>
+        </button>
+
+        <!-- Manual Add Card -->
+        <button onclick="openCardModal()" class="shimmer-btn flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 transition-all active:scale-95">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>New Card</span>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <div id="shared-deck-banner" class="hidden bg-gradient-to-r from-purple-900/90 via-indigo-900/90 to-slate-900/90 border-b border-purple-500/30 px-4 py-3 text-white backdrop-blur-md">
+    <div class="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="p-2 rounded-lg bg-purple-500/30 text-purple-300">
+          <i data-lucide="gift" class="w-5 h-5"></i>
+        </div>
+        <div>
+          <h4 class="text-xs sm:text-sm font-bold flex items-center gap-1.5">
+            Shared Deck Detected!
+            <span id="shared-deck-count" class="px-2 py-0.2 rounded-full bg-purple-400/20 text-purple-200 text-[11px] font-mono">0 cards</span>
+          </h4>
+          <p class="text-[11px] text-slate-300">Someone shared their study deck with you.</p>
+        </div>
+      </div>
+      <div class="flex items-center space-x-2 w-full sm:w-auto justify-end">
+        <button onclick="openSharedPreviewModal()" class="px-3 py-1.5 rounded-lg bg-white/10 hover:bg-white/20 text-xs font-semibold transition-colors">
+          Preview
+        </button>
+        <button onclick="confirmImportSharedDeck(false)" class="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-500 text-xs font-semibold text-white shadow-md transition-colors">
+          Merge to Deck
+        </button>
+        <button onclick="dismissSharedBanner()" class="p-1.5 text-slate-400 hover:text-white" title="Dismiss">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <main class="flex-grow max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-6 flex flex-col gap-5">
+
+    <!-- VIEW 1: MULTI-GRID VIEW -->
+    <div id="grid-view-section" class="flex flex-col gap-5">
+      
+      <!-- Top Interactive Filter Bar -->
+      <section class="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3 bg-white/[0.03] backdrop-blur-sm p-3.5 sm:p-4 rounded-2xl border border-white/10">
+        
+        <!-- Search & Tag Filter -->
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 flex-1">
+          <div class="relative flex-1">
+            <i data-lucide="search" class="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"></i>
+            <input 
+              type="text" 
+              id="search-input" 
+              placeholder="Search cards, concepts, or tags..." 
+              oninput="handleSearch(this.value)"
+              class="w-full pl-9 pr-8 py-2 rounded-xl bg-black/40 border border-white/10 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-indigo-500 transition-all"
+            >
+            <button id="search-clear-btn" onclick="clearSearch()" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white">
+              <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+          <!-- Tag Filter Pills -->
+          <div id="tags-container" class="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 max-w-full sm:max-w-md no-scrollbar">
+            <!-- Dynamic tags -->
+          </div>
+        </div>
+
+        <!-- Bulk Actions & Font Stepper Button -->
+        <div class="flex items-center justify-between sm:justify-end gap-1.5 pt-2 lg:pt-0 border-t lg:border-t-0 border-white/5">
+          <div class="text-xs text-slate-400 mr-1 flex items-center gap-1">
+            <span id="active-card-count" class="font-bold text-slate-200">0</span> cards
+          </div>
+
+          <!-- Quick Font Size Button for Grid -->
+          <button onclick="openFontModal()" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-indigo-300 border border-white/10 transition-colors" title="Adjust Card Font Size">
+            <span class="font-extrabold text-[11px]">Aa</span>
+            <span id="grid-font-size-badge" class="text-[10px] text-indigo-300 font-mono">18px</span>
+          </button>
+
+          <button onclick="flipAllCards(true)" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-indigo-300 border border-indigo-500/20 transition-colors" title="Flip all to answers">
+            <i data-lucide="flip-horizontal" class="w-3.5 h-3.5"></i>
+            <span>Flip All</span>
+          </button>
+          
+          <button onclick="flipAllCards(false)" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-xs font-semibold text-slate-300 border border-white/10 transition-colors" title="Reset all to questions">
+            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+            <span>Reset</span>
+          </button>
+
+          <button onclick="shuffleDeck()" title="Shuffle Deck" class="p-1.5 rounded-lg bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 transition-colors">
+            <i data-lucide="shuffle" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+
+      </section>
+
+      <!-- Multi-Card Grid Container -->
+      <div id="cards-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 sm:gap-6">
+        <!-- Injected Cards -->
+      </div>
+
+      <!-- Empty State -->
+      <div id="grid-empty-state" class="hidden flex-col items-center justify-center py-16 text-center px-4">
+        <div class="w-14 h-14 rounded-full bg-white/5 border border-white/10 flex items-center justify-center text-slate-400 mb-3">
+          <i data-lucide="search-x" class="w-7 h-7"></i>
+        </div>
+        <h3 class="text-base font-bold text-white mb-1">No flashcards found</h3>
+        <p class="text-xs text-slate-400 max-w-sm mb-5">No cards match your query. Create a new card or scan notes with AI.</p>
+        <div class="flex items-center gap-2">
+          <button onclick="clearSearch()" class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-xs font-semibold text-white transition-colors">
+            Clear Filters
+          </button>
+          <button onclick="switchView('scan')" class="px-3.5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-xs font-semibold text-white transition-colors flex items-center gap-1">
+            <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+            Scan Material
+          </button>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- VIEW 2: STUDY CAROUSEL VIEW -->
+    <div id="study-view-section" class="hidden flex-col items-center justify-center flex-grow py-2 sm:py-4">
+      
+      <!-- Progress Bar, In-Study Font Stepper, and Actions -->
+      <div class="w-full max-w-2xl mb-4 px-2">
+        <div class="flex items-center justify-between text-xs font-medium text-slate-400 mb-2">
+          <span id="study-counter">Card 1 of 10</span>
+          
+          <!-- In-Study Quick Font Sizer -->
+          <div class="flex items-center bg-black/50 border border-white/10 rounded-xl px-1.5 py-0.5 space-x-1 shadow-sm">
+            <button onclick="stepFontSize(-2)" class="px-1.5 py-0.5 text-[11px] font-bold text-slate-300 hover:text-white rounded hover:bg-white/10" title="Decrease font size">A-</button>
+            <button onclick="openFontModal()" class="flex items-center space-x-1 px-2 py-0.5 text-indigo-300 hover:text-white text-[11px] font-semibold rounded hover:bg-white/10" title="Font size options">
+              <span>Aa</span>
+              <span id="study-font-badge" class="font-mono text-[10px]">18px</span>
+            </button>
+            <button onclick="stepFontSize(2)" class="px-1.5 py-0.5 text-[11px] font-bold text-slate-300 hover:text-white rounded hover:bg-white/10" title="Increase font size">A+</button>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <span id="study-percent">10% Completed</span>
+          </div>
+        </div>
+
+        <div class="w-full h-1.5 sm:h-2 bg-black/40 rounded-full overflow-hidden border border-white/10">
+          <div id="study-progress-fill" class="h-full bg-gradient-to-r from-indigo-500 to-violet-400 rounded-full transition-all duration-300" style="width: 10%;"></div>
+        </div>
+      </div>
+
+      <!-- Single Large 3D Study Card with Touch Handlers and Dynamic Scaled Text -->
+      <div 
+        id="study-touch-wrapper"
+        class="perspective-container w-full max-w-2xl h-[360px] sm:h-[420px] mb-4 sm:mb-6 select-none transition-transform duration-200"
+      >
+        <div id="study-card-inner" class="flip-card-inner cursor-pointer" onclick="handleStudyCardClick()">
+          
+          <!-- Study Front (Question) -->
+          <div class="flip-card-front p-6 sm:p-8 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span id="study-card-tag-front" class="px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 uppercase tracking-wider">
+                Category
+              </span>
+              <span class="text-[11px] sm:text-xs text-slate-400 flex items-center gap-1">
+                <i data-lucide="help-circle" class="w-3.5 h-3.5"></i>
+                Question
+              </span>
+            </div>
+
+            <!-- Scaled Scrollable Question Text -->
+            <div class="my-auto py-3 text-center overflow-y-auto max-h-56 sm:max-h-64 custom-card-scroll px-2">
+              <p id="study-card-q" class="dynamic-study-text font-bold text-slate-100 transition-all duration-200">
+                What is the question?
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] sm:text-xs text-slate-400">
+              <span class="flex items-center gap-1">
+                <i data-lucide="touchpad" class="w-3.5 h-3.5 text-indigo-400 sm:hidden"></i>
+                <i data-lucide="mouse-pointer-click" class="w-3.5 h-3.5 text-indigo-400 hidden sm:inline"></i>
+                <span>Tap or press <kbd class="px-1 py-0.5 bg-black/40 rounded border border-white/20 text-[10px] text-slate-300">Space</kbd> to flip</span>
+              </span>
+              <span class="text-slate-500 font-mono text-[10px]">SWIPE ⇄</span>
+            </div>
+          </div>
+
+          <!-- Study Back (Answer) -->
+          <div class="flip-card-back p-6 sm:p-8 flex flex-col justify-between">
+            <div class="flex items-center justify-between">
+              <span id="study-card-tag-back" class="px-2.5 py-0.5 sm:py-1 rounded-full text-[10px] sm:text-xs font-semibold bg-white/20 text-white border border-white/30 uppercase tracking-wider">
+                Category
+              </span>
+              <span class="text-[11px] sm:text-xs text-emerald-300 flex items-center gap-1">
+                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+                Answer
+              </span>
+            </div>
+
+            <!-- Scaled Scrollable Answer Text -->
+            <div class="my-auto py-3 text-center overflow-y-auto max-h-56 sm:max-h-64 custom-card-scroll px-2">
+              <p id="study-card-a" class="dynamic-study-text font-medium text-white transition-all duration-200">
+                This is the answer explanation.
+              </p>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-white/10 text-[11px] sm:text-xs text-white/70">
+              <span class="flex items-center gap-1">
+                <i data-lucide="rotate-3d" class="w-3.5 h-3.5"></i>
+                <span>Tap again to flip back</span>
+              </span>
+              <span class="text-white/40 font-mono text-[10px]">ANSWER</span>
+            </div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- Desktop & Tablet Controls Row -->
+      <div class="hidden sm:flex w-full max-w-2xl items-center justify-between gap-4">
+        <div class="flex items-center space-x-2.5">
+          <button id="study-prev-btn" onclick="studyNav(-1)" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+            <i data-lucide="arrow-left" class="w-4 h-4"></i>
+            <span>Previous</span>
+          </button>
+          
+          <button onclick="toggleStudyCardFlip()" class="px-5 py-2 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 transition-all active:scale-95">
+            Flip Card
+          </button>
+
+          <button id="study-next-btn" onclick="studyNav(1)" class="flex items-center space-x-1.5 px-4 py-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white text-xs font-semibold transition-all active:scale-95 disabled:opacity-30 disabled:pointer-events-none">
+            <span>Next</span>
+            <i data-lucide="arrow-right" class="w-4 h-4"></i>
+          </button>
+        </div>
+
+        <div class="flex items-center space-x-2">
+          <button id="study-mastered-btn" onclick="toggleCurrentMastery()" class="flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/10 hover:bg-emerald-500/20 text-emerald-400 border border-emerald-500/20 text-xs font-semibold transition-all">
+            <i data-lucide="check" class="w-3.5 h-3.5"></i>
+            <span id="study-mastered-label">Mark Mastered</span>
+          </button>
+          <button onclick="editCurrentStudyCard()" title="Edit this card" class="p-2 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-slate-300 transition-colors">
+            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="mt-4 sm:mt-6 hidden sm:flex flex-wrap items-center justify-center gap-3 text-[11px] text-slate-500">
+        <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-black/40 border border-white/10 rounded">←</kbd> Prev</span>
+        <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-black/40 border border-white/10 rounded">→</kbd> Next</span>
+        <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-black/40 border border-white/10 rounded">Space</kbd> Flip</span>
+        <span class="flex items-center gap-1"><kbd class="px-1.5 py-0.5 bg-black/40 border border-white/10 rounded">M</kbd> Mastered</span>
+      </div>
+
+      <p class="sm:hidden text-[11px] text-slate-400 mt-2 flex items-center gap-1">
+        <i data-lucide="hand" class="w-3.5 h-3.5 text-indigo-400"></i>
+        <span>Swipe left/right • Tap to flip</span>
+      </p>
+    </div>
+
+    <!-- VIEW 3: AI IMAGE UPLOADER & MATERIAL SUMMARIZER -->
+    <div id="scan-view-section" class="hidden flex-col gap-5">
+      
+      <!-- Introduction Banner -->
+      <div class="bg-gradient-to-r from-purple-900/40 via-indigo-900/30 to-slate-900/50 border border-purple-500/20 rounded-2xl p-4 sm:p-7 backdrop-blur-md relative overflow-hidden">
+        <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl pointer-events-none"></div>
+        <div class="max-w-2xl">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-purple-500/20 border border-purple-500/30 text-purple-300 text-[10px] sm:text-xs font-semibold uppercase tracking-wider mb-2">
+            <i data-lucide="sparkles" class="w-3 h-3"></i>
+            Multimodal Gemini Intelligence
+          </div>
+          <h2 class="text-xl sm:text-2xl md:text-3xl font-extrabold text-white tracking-tight mb-1.5">
+            Scan Notes & Generate Summaries
+          </h2>
+          <p class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-3">
+            Snap textbook pages directly with your phone camera, upload slides, or paste screenshots. Gemini extracts core concepts and builds instant flashcard decks.
+          </p>
+          <div class="flex flex-wrap items-center gap-3 text-xs text-slate-400">
+            <span class="flex items-center gap-1 text-purple-300">
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+              Smartphone Camera Support
+            </span>
+            <span class="flex items-center gap-1 text-purple-300">
+              <i data-lucide="check" class="w-3.5 h-3.5"></i>
+              Auto Q&A Extraction
+            </span>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-5">
+        
+        <!-- Left Column: Upload Dropzone & Controls (5 Cols) -->
+        <div class="lg:col-span-5 flex flex-col gap-3.5">
+          
+          <input type="file" id="camera-file-input" accept="image/*" capture="environment" class="hidden" onchange="handleFileSelect(event)">
+          <input type="file" id="gallery-file-input" accept="image/*" class="hidden" onchange="handleFileSelect(event)">
+
+          <div 
+            id="dropzone"
+            ondragover="handleDragOver(event)"
+            ondragleave="handleDragLeave(event)"
+            ondrop="handleDrop(event)"
+            class="relative border-2 border-dashed border-white/20 hover:border-purple-400/60 bg-black/40 rounded-2xl p-5 flex flex-col items-center justify-center text-center transition-all cursor-pointer group min-h-[260px] sm:min-h-[300px]"
+            onclick="triggerGalleryInput()"
+          >
+            <!-- Empty Dropzone State -->
+            <div id="dropzone-empty" class="flex flex-col items-center">
+              <div class="w-14 h-14 rounded-2xl bg-purple-500/10 border border-purple-500/20 text-purple-400 flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+                <i data-lucide="upload-cloud" class="w-7 h-7"></i>
+              </div>
+              <h4 class="text-sm sm:text-base font-bold text-white mb-1">Add Study Material Photo</h4>
+              <p class="text-xs text-slate-400 max-w-xs mb-3">
+                Tap to browse, snap with camera, or drag & drop notes
+              </p>
+              
+              <div class="flex items-center gap-2" onclick="event.stopPropagation()">
+                <button type="button" onclick="triggerCameraInput()" class="px-3 py-1.5 rounded-xl bg-purple-600/90 hover:bg-purple-600 text-white text-xs font-semibold shadow-md flex items-center gap-1.5">
+                  <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+                  <span>Snap Photo</span>
+                </button>
+                <button type="button" onclick="triggerGalleryInput()" class="px-3 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-200 text-xs font-semibold flex items-center gap-1.5">
+                  <i data-lucide="image" class="w-3.5 h-3.5"></i>
+                  <span>Browse File</span>
+                </button>
+              </div>
+
+              <span class="text-[10px] text-slate-500 mt-3">PNG, JPG, WEBP • Paste with Ctrl+V</span>
+            </div>
+
+            <!-- Preview State -->
+            <div id="dropzone-preview-container" class="hidden flex-col items-center w-full">
+              <div class="relative w-full h-48 sm:h-56 rounded-xl overflow-hidden border border-white/10 bg-slate-950 flex items-center justify-center group/img">
+                <img id="image-preview" src="" alt="Material Preview" class="max-w-full max-h-full object-contain">
+                <div id="scanner-line" class="hidden absolute inset-0 bg-gradient-to-b from-purple-500/30 via-indigo-500/20 to-transparent scan-line pointer-events-none"></div>
+
+                <div class="absolute top-2 right-2 flex items-center space-x-1.5">
+                  <button type="button" onclick="event.stopPropagation(); removeUploadedImage()" class="p-1.5 rounded-lg bg-black/70 hover:bg-rose-600/80 text-white text-xs transition-colors" title="Remove Image">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                  </button>
+                </div>
+              </div>
+
+              <div class="w-full flex items-center justify-between text-xs text-slate-400 mt-2 px-1">
+                <span id="preview-file-name" class="truncate max-w-[170px] font-medium text-slate-200">image.png</span>
+                <span id="preview-file-size" class="text-[11px]">0 KB</span>
+              </div>
+            </div>
+
+          </div>
+
+          <div class="flex items-center justify-between gap-2">
+            <button 
+              type="button" 
+              onclick="loadSampleMaterial()" 
+              class="flex-1 flex items-center justify-center space-x-1 py-2 px-2.5 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-medium text-slate-300 transition-colors"
+            >
+              <i data-lucide="file-text" class="w-3.5 h-3.5 text-purple-400"></i>
+              <span>Try Sample Note</span>
+            </button>
+
+            <button 
+              type="button" 
+              onclick="triggerCameraInput()" 
+              class="flex items-center space-x-1 py-2 px-3 rounded-xl bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/20 text-xs font-medium text-purple-300 transition-colors"
+              title="Camera Capture"
+            >
+              <i data-lucide="camera" class="w-3.5 h-3.5"></i>
+              <span>Camera</span>
+            </button>
+          </div>
+
+          <button 
+            id="analyze-material-btn" 
+            onclick="startMaterialAnalysis()" 
+            disabled 
+            class="shimmer-btn w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 via-indigo-600 to-violet-600 hover:from-purple-500 hover:to-indigo-500 text-white font-bold text-xs sm:text-sm shadow-xl shadow-purple-600/30 flex items-center justify-center space-x-2 transition-all disabled:opacity-40 disabled:pointer-events-none active:scale-[0.99]"
+          >
+            <i data-lucide="sparkles" class="w-4 h-4"></i>
+            <span id="analyze-btn-text">Summarize & Generate Flashcards</span>
+          </button>
+
+        </div>
+
+        <!-- Right Column: AI Output & Flashcard Generator (7 Cols) -->
+        <div class="lg:col-span-7 flex flex-col gap-4">
+          
+          <div id="ai-loading-card" class="hidden flex-col items-center justify-center p-8 sm:p-12 bg-black/40 border border-purple-500/20 rounded-2xl min-h-[360px] text-center relative overflow-hidden">
+            <div class="w-16 h-16 rounded-full bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 mb-4 relative">
+              <i data-lucide="cpu" class="w-8 h-8 animate-spin"></i>
+            </div>
+            
+            <h3 class="text-base sm:text-lg font-bold text-white mb-1">Analyzing Material with Gemini...</h3>
+            <p class="text-xs text-slate-400 max-w-sm mb-5 leading-relaxed">
+              Extracting handwriting, text, definitions, and synthesizing high-yield study flashcards...
+            </p>
+
+            <div class="w-full max-w-xs space-y-2 text-left text-xs text-slate-400">
+              <div class="flex items-center gap-2 text-purple-300">
+                <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-purple-400"></i>
+                <span>Reading visual input & notes</span>
+              </div>
+              <div class="flex items-center gap-2 text-purple-300">
+                <i data-lucide="loader-2" class="w-3.5 h-3.5 animate-spin text-purple-400"></i>
+                <span>Composing structured summary</span>
+              </div>
+              <div class="flex items-center gap-2 text-slate-500">
+                <i data-lucide="circle" class="w-3.5 h-3.5"></i>
+                <span>Building question-answer pairs</span>
+              </div>
+            </div>
+          </div>
+
+          <div id="ai-placeholder-card" class="flex flex-col items-center justify-center p-8 sm:p-12 bg-black/20 border border-white/5 rounded-2xl min-h-[340px] text-center">
+            <div class="w-14 h-14 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-slate-500 mb-3">
+              <i data-lucide="book-open" class="w-7 h-7"></i>
+            </div>
+            <h3 class="text-sm sm:text-base font-bold text-white mb-1">Summary & Flashcards Will Appear Here</h3>
+            <p class="text-xs text-slate-400 max-w-sm">
+              Snap a picture or upload notes on the left, then click "Summarize & Generate Flashcards".
+            </p>
+          </div>
+
+          <!-- AI Output View -->
+          <div id="ai-output-container" class="hidden flex-col gap-4">
+            
+            <!-- Summary Card -->
+            <div class="bg-black/50 border border-purple-500/20 rounded-2xl p-5 sm:p-6 backdrop-blur-md">
+              <div class="flex items-start justify-between gap-3 mb-3 pb-3 border-b border-white/10">
+                <div>
+                  <div class="flex items-center gap-1.5 mb-1">
+                    <span class="px-2 py-0.5 rounded-full text-[9px] font-bold bg-purple-500/20 text-purple-300 border border-purple-500/30 uppercase tracking-wider">
+                      AI Summary
+                    </span>
+                    <span id="ai-summary-tag" class="px-1.5 py-0.5 rounded-md text-[10px] font-semibold bg-white/10 text-slate-300">
+                      Topic
+                    </span>
+                  </div>
+                  <h3 id="ai-summary-title" class="text-base sm:text-lg font-bold text-white">
+                    Subject Title
+                  </h3>
+                </div>
+
+                <button onclick="copySummaryToClipboard()" title="Copy Summary Text" class="flex items-center space-x-1 px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 text-xs font-semibold text-slate-300 transition-colors">
+                  <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                  <span>Copy</span>
+                </button>
+              </div>
+
+              <!-- Overview Paragraph -->
+              <div class="mb-4">
+                <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <i data-lucide="align-left" class="w-3 h-3 text-purple-400"></i>
+                  Concept Overview
+                </h4>
+                <p id="ai-summary-overview" class="text-xs sm:text-sm text-slate-200 leading-relaxed bg-white/[0.02] p-3 rounded-xl border border-white/5">
+                  Overview content...
+                </p>
+              </div>
+
+              <!-- Bullet Points -->
+              <div class="mb-4">
+                <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <i data-lucide="check-circle" class="w-3 h-3 text-emerald-400"></i>
+                  Key Takeaways
+                </h4>
+                <ul id="ai-summary-points" class="space-y-1.5 text-xs sm:text-sm text-slate-300">
+                  <!-- Injected items -->
+                </ul>
+              </div>
+
+              <!-- Key Terms -->
+              <div>
+                <h4 class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider mb-1.5 flex items-center gap-1">
+                  <i data-lucide="bookmark" class="w-3 h-3 text-indigo-400"></i>
+                  Key Terms & Definitions
+                </h4>
+                <div id="ai-summary-terms" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                  <!-- Injected terms -->
+                </div>
+              </div>
+
+            </div>
+
+            <!-- Extracted Flashcards List -->
+            <div class="bg-black/50 border border-indigo-500/20 rounded-2xl p-5 sm:p-6 backdrop-blur-md">
+              <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5 mb-3 pb-3 border-b border-white/10">
+                <div>
+                  <h4 class="text-sm sm:text-base font-bold text-white flex items-center gap-1.5">
+                    <i data-lucide="layers" class="w-4 h-4 text-indigo-400"></i>
+                    Extracted Flashcards (<span id="ai-card-count">0</span>)
+                  </h4>
+                  <p class="text-[11px] text-slate-400">Ready to add to your study deck</p>
+                </div>
+
+                <div class="flex items-center space-x-2 w-full sm:w-auto">
+                  <button 
+                    onclick="addAllAiCardsToDeck()" 
+                    class="flex-1 sm:flex-initial px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-1 transition-all"
+                  >
+                    <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                    <span>Add All to Deck</span>
+                  </button>
+                  <button 
+                    onclick="switchView('study')" 
+                    class="px-3 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold border border-white/10 transition-colors"
+                  >
+                    Study
+                  </button>
+                </div>
+              </div>
+
+              <!-- Extracted List -->
+              <div id="ai-cards-preview-list" class="space-y-2.5">
+                <!-- Dynamic cards -->
+              </div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+
+  </main>
+
+  <div class="md:hidden fixed bottom-0 left-0 right-0 z-40 bg-slate-950/90 backdrop-blur-lg border-t border-white/10 px-3 py-2 flex items-center justify-around shadow-2xl">
+    <button onclick="mobileNavAction(-1)" class="flex flex-col items-center justify-center text-slate-300 active:scale-90 transition-transform p-1.5">
+      <i data-lucide="chevron-left" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium mt-0.5">Prev</span>
+    </button>
+
+    <button onclick="mobileFlipAction()" class="flex flex-col items-center justify-center px-4 py-2 rounded-2xl bg-indigo-600 text-white shadow-lg shadow-indigo-600/40 active:scale-95 transition-transform">
+      <i data-lucide="rotate-3d" class="w-5 h-5"></i>
+      <span class="text-[10px] font-bold mt-0.5">Flip</span>
+    </button>
+
+    <button onclick="mobileNavAction(1)" class="flex flex-col items-center justify-center text-slate-300 active:scale-90 transition-transform p-1.5">
+      <i data-lucide="chevron-right" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium mt-0.5">Next</span>
+    </button>
+
+    <!-- Mobile Font Size Adjuster Trigger -->
+    <button onclick="openFontModal()" class="flex flex-col items-center justify-center text-indigo-300 active:scale-90 transition-transform p-1.5">
+      <span class="text-sm font-extrabold leading-none">Aa</span>
+      <span id="mobile-bottom-font-indicator" class="text-[10px] font-mono mt-0.5">18px</span>
+    </button>
+
+    <button onclick="openShareModal()" class="flex flex-col items-center justify-center text-indigo-400 active:scale-90 transition-transform p-1.5">
+      <i data-lucide="share-2" class="w-5 h-5"></i>
+      <span class="text-[10px] font-medium mt-0.5">Share</span>
+    </button>
+  </div>
+
+  <!-- MODAL: FONT SIZE CUSTOMIZATION SYSTEM -->
+  <div id="font-modal" class="fixed inset-0 z-50 hidden bg-black/80 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-indigo-500/30 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl animate-in fade-in zoom-in duration-150 flex flex-col">
+      
+      <!-- Modal Header -->
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10 bg-black/40">
+        <div class="flex items-center space-x-2.5">
+          <div class="p-2 rounded-lg bg-indigo-600/20 text-indigo-300 font-extrabold text-sm border border-indigo-500/30">
+            Aa
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Font Size Customizer</h3>
+            <p class="text-[11px] text-slate-400">Scale text for comfortable reading across all cards</p>
+          </div>
+        </div>
+        <button onclick="closeFontModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-5 overflow-y-auto max-h-[75vh]">
+        
+        <!-- Live Font Preview Box -->
+        <div class="bg-slate-950/70 border border-white/10 rounded-xl p-4 text-center">
+          <span class="text-[10px] uppercase font-bold text-indigo-400 tracking-wider block mb-2">Live Text Preview</span>
+          <div class="min-h-[70px] flex items-center justify-center bg-white/[0.02] p-3 rounded-lg border border-white/5">
+            <p id="font-preview-text" class="dynamic-card-text font-semibold text-slate-100 transition-all duration-150 leading-relaxed">
+              "A closure is the combination of a function bundled with its lexical environment."
+            </p>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400 mt-2.5 px-1">
+            <span>Current Size:</span>
+            <span id="font-modal-readout" class="font-mono font-bold text-indigo-300 text-sm">18px (100%)</span>
+          </div>
+        </div>
+
+        <!-- Quick Stepper Controls: A- and A+ -->
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2">Quick Step Controls</label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="stepFontSize(-2)" class="py-2.5 px-3 rounded-xl bg-white/5 hover:bg-white/10 border border-white/10 text-white font-bold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95">
+              <span class="text-base">A-</span>
+              <span class="text-slate-400 font-normal">Decrease (2px)</span>
+            </button>
+            <button onclick="stepFontSize(2)" class="py-2.5 px-3 rounded-xl bg-indigo-600/20 hover:bg-indigo-600/30 border border-indigo-500/30 text-indigo-200 font-bold text-xs flex items-center justify-center space-x-1.5 transition-all active:scale-95">
+              <span class="text-base">A+</span>
+              <span class="text-indigo-300 font-normal">Increase (2px)</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Preset Pills -->
+        <div>
+          <div class="flex items-center justify-between mb-2">
+            <label class="text-[11px] font-semibold text-slate-300 uppercase tracking-wider">Font Size Presets</label>
+            <button onclick="setFontSize(18)" class="text-[11px] text-indigo-400 hover:text-indigo-300 underline">Reset Default</button>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <button onclick="setFontSize(14)" id="preset-btn-14" class="py-2 px-2.5 rounded-xl border text-xs font-semibold text-center transition-all bg-white/5 border-white/10 text-slate-300 hover:text-white">
+              <span class="block font-bold">Compact</span>
+              <span class="text-[10px] text-slate-400 font-mono">14px</span>
+            </button>
+
+            <button onclick="setFontSize(18)" id="preset-btn-18" class="py-2 px-2.5 rounded-xl border text-xs font-semibold text-center transition-all bg-indigo-600 text-white border-indigo-500 shadow-md">
+              <span class="block font-bold">Standard</span>
+              <span class="text-[10px] text-indigo-200 font-mono">18px</span>
+            </button>
+
+            <button onclick="setFontSize(22)" id="preset-btn-22" class="py-2 px-2.5 rounded-xl border text-xs font-semibold text-center transition-all bg-white/5 border-white/10 text-slate-300 hover:text-white">
+              <span class="block font-bold">Large</span>
+              <span class="text-[10px] text-slate-400 font-mono">22px</span>
+            </button>
+
+            <button onclick="setFontSize(28)" id="preset-btn-28" class="py-2 px-2.5 rounded-xl border text-xs font-semibold text-center transition-all bg-white/5 border-white/10 text-slate-300 hover:text-white">
+              <span class="block font-bold">Extra Large</span>
+              <span class="text-[10px] text-slate-400 font-mono">28px</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Smooth Range Slider -->
+        <div>
+          <div class="flex items-center justify-between text-[11px] text-slate-400 mb-2">
+            <span class="font-semibold text-slate-300 uppercase tracking-wider">Fine-Tuned Slider</span>
+            <span class="font-mono text-slate-400">12px — 36px</span>
+          </div>
+          <input 
+            type="range" 
+            id="font-size-slider" 
+            min="12" 
+            max="36" 
+            step="1" 
+            value="18"
+            oninput="handleSliderChange(this.value)"
+            class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-indigo-500"
+          >
+          <div class="flex justify-between text-[10px] text-slate-500 mt-1 font-mono">
+            <span>12px</span>
+            <span>18px (Default)</span>
+            <span>26px</span>
+            <span>36px</span>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Modal Footer -->
+      <div class="px-5 py-3 bg-black/40 border-t border-white/10 flex items-center justify-between">
+        <span class="text-[11px] text-slate-400">Auto-saved to your browser</span>
+        <button onclick="closeFontModal()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors shadow-md">
+          Done
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- MODAL: SHARE & EXPORT -->
+  <div id="share-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+      
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-400">
+            <i data-lucide="share-2" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Share & Export Deck</h3>
+            <p class="text-[11px] text-slate-400">Send to smartphone, generate QR, or download</p>
+          </div>
+        </div>
+        <button onclick="closeShareModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="flex border-b border-white/10 bg-black/30 p-1">
+        <button id="share-tab-link" onclick="switchShareTab('link')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition-all">
+          Link & QR Code
+        </button>
+        <button id="share-tab-export" onclick="switchShareTab('export')" class="flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all">
+          File Export (JSON/CSV)
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 overflow-y-auto flex-grow">
+        
+        <!-- Tab 1: Web Link & QR -->
+        <div id="share-content-link" class="space-y-4">
+          <div class="flex flex-col items-center justify-center bg-black/40 border border-white/10 rounded-xl p-4 text-center">
+            <div id="share-qrcode-container" class="bg-white p-2.5 rounded-xl shadow-md mb-3 flex items-center justify-center">
+              <!-- QRCode rendered via qrcode.js -->
+            </div>
+            <p class="text-xs font-semibold text-slate-200 mb-0.5">Scan with Phone Camera</p>
+            <p class="text-[11px] text-slate-400 max-w-xs">
+              Open your smartphone camera to immediately access and study this deck on mobile.
+            </p>
+          </div>
+
+          <button 
+            id="native-web-share-btn" 
+            onclick="triggerNativeWebShare()" 
+            class="w-full py-2.5 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-semibold text-xs shadow-lg shadow-indigo-600/30 flex items-center justify-center space-x-2 transition-all active:scale-[0.99]"
+          >
+            <i data-lucide="smartphone" class="w-4 h-4"></i>
+            <span>Send to Phone / Apps (AirDrop, WhatsApp, SMS)</span>
+          </button>
+
+          <div>
+            <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1.5">Shareable Web Link</label>
+            <div class="flex items-center space-x-2">
+              <input 
+                type="text" 
+                id="share-link-input" 
+                readonly 
+                class="flex-1 px-3 py-2 rounded-xl bg-black/50 border border-white/10 text-slate-300 text-xs font-mono focus:outline-none select-all"
+              >
+              <button 
+                onclick="copyShareLink()" 
+                id="copy-share-btn"
+                class="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs whitespace-nowrap transition-colors flex items-center space-x-1"
+              >
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                <span id="copy-share-text">Copy</span>
+              </button>
+            </div>
+            <span class="text-[10px] text-slate-500 mt-1 block">Deck encoded into URL fragment. No server account required.</span>
+          </div>
+        </div>
+
+        <!-- Tab 2: Export to Files -->
+        <div id="share-content-export" class="hidden space-y-3">
+          <p class="text-xs text-slate-300 leading-relaxed">
+            Download your flashcards to keep local backups or import into Anki, Quizlet, spreadsheets, or other study apps.
+          </p>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+            <div class="bg-black/40 border border-white/10 rounded-xl p-4 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center space-x-2 mb-1.5 text-indigo-400">
+                  <i data-lucide="file-json" class="w-5 h-5"></i>
+                  <span class="font-bold text-white text-xs">JSON Deck File</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mb-3">
+                  Full deck backup with question, answer, category tag, and mastery status.
+                </p>
+              </div>
+              <button onclick="exportDeckAsJson()" class="w-full py-2 rounded-lg bg-indigo-600/30 hover:bg-indigo-600/50 border border-indigo-500/40 text-indigo-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Download .JSON</span>
+              </button>
+            </div>
+
+            <div class="bg-black/40 border border-white/10 rounded-xl p-4 flex flex-col justify-between">
+              <div>
+                <div class="flex items-center space-x-2 mb-1.5 text-emerald-400">
+                  <i data-lucide="file-spreadsheet" class="w-5 h-5"></i>
+                  <span class="font-bold text-white text-xs">CSV Spreadsheet</span>
+                </div>
+                <p class="text-[11px] text-slate-400 mb-3">
+                  Comma-separated format compatible with Excel, Google Sheets, & Anki.
+                </p>
+              </div>
+              <button onclick="exportDeckAsCsv()" class="w-full py-2 rounded-lg bg-emerald-600/30 hover:bg-emerald-600/50 border border-emerald-500/40 text-emerald-200 text-xs font-semibold flex items-center justify-center space-x-1.5 transition-colors">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i>
+                <span>Download .CSV</span>
+              </button>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <div class="px-5 py-3 bg-black/40 border-t border-white/10 flex justify-end">
+        <button onclick="closeShareModal()" class="px-4 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-semibold text-xs transition-colors">
+          Close
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: DECK IMPORT -->
+  <div id="import-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-lg bg-emerald-500/20 text-emerald-400">
+            <i data-lucide="upload" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Import Flashcards</h3>
+            <p class="text-[11px] text-slate-400">Load JSON file or paste deck data</p>
+          </div>
+        </div>
+        <button onclick="closeImportModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-4 text-xs">
+        <div>
+          <label class="block font-semibold text-slate-300 uppercase tracking-wider text-[11px] mb-1.5">Select JSON File</label>
+          <input 
+            type="file" 
+            id="import-file-input" 
+            accept=".json,application/json" 
+            onchange="handleImportFile(event)"
+            class="block w-full text-xs text-slate-400 file:mr-3 file:py-2 file:px-3.5 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-600 file:text-white hover:file:bg-indigo-500 cursor-pointer"
+          >
+        </div>
+
+        <div class="flex items-center text-slate-500">
+          <span class="flex-grow border-t border-white/10"></span>
+          <span class="px-2 text-[10px] uppercase font-bold">OR PASTE JSON</span>
+          <span class="flex-grow border-t border-white/10"></span>
+        </div>
+
+        <div>
+          <textarea 
+            id="import-text-input" 
+            rows="4" 
+            placeholder='[{"question": "...", "answer": "...", "tag": "..."}]'
+            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-xs font-mono focus:outline-none focus:border-indigo-500 resize-none"
+          ></textarea>
+        </div>
+
+        <div class="p-3 bg-white/[0.02] border border-white/5 rounded-xl space-y-2">
+          <span class="text-[11px] font-semibold text-slate-300 block">Import Action:</span>
+          <div class="flex items-center gap-4 text-slate-300">
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="import-mode" value="merge" checked class="text-indigo-600 focus:ring-0">
+              <span>Merge with existing deck</span>
+            </label>
+            <label class="flex items-center gap-1.5 cursor-pointer">
+              <input type="radio" name="import-mode" value="replace" class="text-indigo-600 focus:ring-0">
+              <span>Replace entire deck</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-black/40 border-t border-white/10 flex justify-end space-x-2">
+        <button onclick="closeImportModal()" class="px-4 py-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 font-semibold text-xs">
+          Cancel
+        </button>
+        <button onclick="executeTextImport()" class="px-4 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-md">
+          Execute Import
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SHARED DECK PREVIEW -->
+  <div id="shared-preview-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-purple-500/30 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl flex flex-col max-h-[85vh]">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+        <div>
+          <h3 class="text-sm sm:text-base font-bold text-white">Preview Shared Flashcards</h3>
+          <p class="text-[11px] text-slate-400">Review before adding to your study library</p>
+        </div>
+        <button onclick="closeSharedPreviewModal()" class="text-slate-400 hover:text-white p-1">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="shared-preview-cards-list" class="p-5 space-y-2.5 overflow-y-auto flex-grow">
+        <!-- Injected items -->
+      </div>
+
+      <div class="px-5 py-3.5 bg-black/40 border-t border-white/10 flex items-center justify-between gap-2">
+        <button onclick="closeSharedPreviewModal()" class="px-3.5 py-1.5 rounded-xl bg-white/10 text-slate-300 text-xs font-semibold">
+          Close
+        </button>
+        <div class="flex items-center space-x-2">
+          <button onclick="confirmImportSharedDeck(true)" class="px-3 py-1.5 rounded-xl bg-rose-600/30 hover:bg-rose-600/50 border border-rose-500/40 text-rose-200 text-xs font-semibold">
+            Replace Deck
+          </button>
+          <button onclick="confirmImportSharedDeck(false)" class="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold shadow-lg shadow-purple-600/30">
+            Merge into My Deck
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: THEMES & BACKGROUND CUSTOMIZER -->
+  <div id="theme-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-400">
+            <i data-lucide="palette" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Background & Themes</h3>
+            <p class="text-[11px] text-slate-400">Select preset or craft custom colors</p>
+          </div>
+        </div>
+        <button onclick="closeThemeModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="p-5 space-y-5 max-h-[70vh] overflow-y-auto">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2.5">Preset Themes</label>
+          <div class="grid grid-cols-2 gap-2.5">
+            <button onclick="applyThemePreset('midnight')" class="flex flex-col items-start p-2.5 rounded-xl border border-white/10 bg-slate-800/60 hover:border-indigo-500 transition-all text-left group">
+              <div class="w-full h-7 rounded-lg bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 border border-white/10 mb-1.5"></div>
+              <span class="text-xs font-bold text-white group-hover:text-indigo-400">Midnight Slate</span>
+              <span class="text-[10px] text-slate-400">Deep navy & indigo</span>
+            </button>
+
+            <button onclick="applyThemePreset('cyber')" class="flex flex-col items-start p-2.5 rounded-xl border border-white/10 bg-slate-800/60 hover:border-pink-500 transition-all text-left group">
+              <div class="w-full h-7 rounded-lg bg-gradient-to-r from-fuchsia-950 via-purple-950 to-slate-950 border border-white/10 mb-1.5"></div>
+              <span class="text-xs font-bold text-white group-hover:text-pink-400">Cyber Neon</span>
+              <span class="text-[10px] text-slate-400">Purple & fuchsia</span>
+            </button>
+
+            <button onclick="applyThemePreset('sunset')" class="flex flex-col items-start p-2.5 rounded-xl border border-white/10 bg-slate-800/60 hover:border-orange-500 transition-all text-left group">
+              <div class="w-full h-7 rounded-lg bg-gradient-to-r from-amber-950 via-rose-950 to-purple-950 border border-white/10 mb-1.5"></div>
+              <span class="text-xs font-bold text-white group-hover:text-orange-400">Sunset Horizon</span>
+              <span class="text-[10px] text-slate-400">Warm twilight</span>
+            </button>
+
+            <button onclick="applyThemePreset('forest')" class="flex flex-col items-start p-2.5 rounded-xl border border-white/10 bg-slate-800/60 hover:border-emerald-500 transition-all text-left group">
+              <div class="w-full h-7 rounded-lg bg-gradient-to-r from-emerald-950 via-teal-950 to-slate-950 border border-white/10 mb-1.5"></div>
+              <span class="text-xs font-bold text-white group-hover:text-emerald-400">Forest Aurora</span>
+              <span class="text-[10px] text-slate-400">Pine & mint</span>
+            </button>
+
+            <button onclick="applyThemePreset('clean-light')" class="flex flex-col items-start p-2.5 rounded-xl border border-white/10 bg-slate-800/60 hover:border-sky-400 transition-all text-left group col-span-2">
+              <div class="w-full h-7 rounded-lg bg-gradient-to-r from-slate-100 via-sky-50 to-indigo-100 border border-slate-300 mb-1.5"></div>
+              <span class="text-xs font-bold text-white group-hover:text-sky-300">Clean Light Studio</span>
+              <span class="text-[10px] text-slate-400">High-contrast daytime</span>
+            </button>
+          </div>
+        </div>
+
+        <div class="pt-3 border-t border-white/10">
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-2.5">Custom Color Builder</label>
+          <div class="grid grid-cols-2 gap-3 mb-3">
+            <div>
+              <span class="text-[11px] text-slate-400 mb-1 block">Gradient Start</span>
+              <div class="flex items-center space-x-2 bg-black/40 p-1.5 rounded-xl border border-white/10">
+                <input type="color" id="custom-bg-start" value="#0f172a" onchange="applyCustomBackground()" class="w-7 h-7 rounded cursor-pointer bg-transparent border-0">
+                <span id="custom-bg-start-val" class="text-[11px] font-mono text-slate-300">#0f172a</span>
+              </div>
+            </div>
+            <div>
+              <span class="text-[11px] text-slate-400 mb-1 block">Gradient End</span>
+              <div class="flex items-center space-x-2 bg-black/40 p-1.5 rounded-xl border border-white/10">
+                <input type="color" id="custom-bg-end" value="#1e1b4b" onchange="applyCustomBackground()" class="w-7 h-7 rounded cursor-pointer bg-transparent border-0">
+                <span id="custom-bg-end-val" class="text-[11px] font-mono text-slate-300">#1e1b4b</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <span class="text-[11px] text-slate-400 mb-1 block">Card Front</span>
+              <div class="flex items-center space-x-2 bg-black/40 p-1.5 rounded-xl border border-white/10">
+                <input type="color" id="custom-card-front" value="#1e293b" onchange="applyCustomBackground()" class="w-7 h-7 rounded cursor-pointer bg-transparent border-0">
+                <span id="custom-card-front-val" class="text-[11px] font-mono text-slate-300">#1e293b</span>
+              </div>
+            </div>
+            <div>
+              <span class="text-[11px] text-slate-400 mb-1 block">Card Back</span>
+              <div class="flex items-center space-x-2 bg-black/40 p-1.5 rounded-xl border border-white/10">
+                <input type="color" id="custom-card-back" value="#312e81" onchange="applyCustomBackground()" class="w-7 h-7 rounded cursor-pointer bg-transparent border-0">
+                <span id="custom-card-back-val" class="text-[11px] font-mono text-slate-300">#312e81</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="px-5 py-3 bg-black/40 border-t border-white/10 flex justify-end">
+        <button onclick="closeThemeModal()" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-semibold text-xs transition-colors">
+          Done
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: MANUAL CARD CREATE / EDIT -->
+  <div id="card-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-lg overflow-hidden shadow-2xl">
+      <div class="flex items-center justify-between px-5 py-3.5 border-b border-white/10">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-lg bg-indigo-500/20 text-indigo-400">
+            <i data-lucide="edit-3" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 id="card-modal-title" class="text-sm sm:text-base font-bold text-white">Create New Flashcard</h3>
+            <p class="text-[11px] text-slate-400">Front question, back answer and tag</p>
+          </div>
+        </div>
+        <button onclick="closeCardModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <form id="flashcard-form" onsubmit="handleCardFormSubmit(event)" class="p-5 space-y-3.5">
+        <input type="hidden" id="card-edit-id" value="">
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Question (Front)</label>
+          <textarea 
+            id="card-question-input" 
+            rows="3" 
+            required 
+            placeholder="e.g. What is the difference between synchronous and asynchronous code?"
+            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 resize-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Answer (Back)</label>
+          <textarea 
+            id="card-answer-input" 
+            rows="3" 
+            required 
+            placeholder="e.g. Synchronous executes sequentially in a blocking fashion, while asynchronous runs without blocking."
+            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-indigo-500 resize-none"
+          ></textarea>
+        </div>
+
+        <div>
+          <label class="block text-[11px] font-semibold text-slate-300 uppercase tracking-wider mb-1">Category Tag</label>
+          <input 
+            type="text" 
+            id="card-tag-input" 
+            placeholder="e.g. Computer Science, Medicine, Biology" 
+            required
+            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-xs sm:text-sm focus:outline-none focus:border-indigo-500"
+          >
+        </div>
+
+        <div class="pt-3 border-t border-white/10 flex items-center justify-end space-x-2.5">
+          <button type="button" onclick="closeCardModal()" class="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold transition-colors">
+            Cancel
+          </button>
+          <button type="submit" class="px-4 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-semibold shadow-lg shadow-indigo-600/30 transition-all active:scale-95">
+            Save Flashcard
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: GEMINI API KEY SETTINGS -->
+  <div id="settings-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-md overflow-hidden shadow-2xl p-5">
+      <div class="flex items-center justify-between pb-3 border-b border-white/10 mb-3.5">
+        <div class="flex items-center space-x-2">
+          <div class="p-2 rounded-lg bg-purple-500/20 text-purple-400">
+            <i data-lucide="key" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-sm sm:text-base font-bold text-white">Gemini API Settings</h3>
+            <p class="text-[11px] text-slate-400">Environment & custom API keys</p>
+          </div>
+        </div>
+        <button onclick="closeSettingsModal()" class="text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/5">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3.5 text-xs text-slate-300">
+        <div class="p-3 bg-purple-500/10 border border-purple-500/20 rounded-xl text-purple-200 leading-relaxed">
+          <strong>Auto-Configured:</strong> In this environment, the Gemini API key is automatically provided at runtime. You can optionally supply your personal Google AI Studio key below.
+        </div>
+
+        <div>
+          <label class="block font-semibold uppercase tracking-wider text-slate-400 text-[11px] mb-1">Custom Gemini API Key</label>
+          <input 
+            type="password" 
+            id="custom-api-key-input" 
+            placeholder="AIzaSy..." 
+            class="w-full px-3 py-2 rounded-xl bg-black/40 border border-white/10 text-white placeholder-slate-500 text-xs focus:outline-none focus:border-purple-500"
+          >
+          <span class="text-[10px] text-slate-500 mt-1 block">Saved safely in your browser's LocalStorage.</span>
+        </div>
+      </div>
+
+      <div class="pt-4 mt-3 border-t border-white/10 flex justify-end gap-2">
+        <button onclick="closeSettingsModal()" class="px-3.5 py-1.5 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold">
+          Cancel
+        </button>
+        <button onclick="saveCustomApiKey()" class="px-4 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold">
+          Save Settings
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: SAFE DELETE CONFIRMATION -->
+  <div id="delete-modal" class="fixed inset-0 z-50 hidden bg-black/75 backdrop-blur-sm flex items-center justify-center p-3 sm:p-4">
+    <div class="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-sm overflow-hidden shadow-2xl p-5 text-center">
+      <div class="w-11 h-11 rounded-full bg-rose-500/10 text-rose-400 border border-rose-500/20 flex items-center justify-center mx-auto mb-3">
+        <i data-lucide="trash-2" class="w-5 h-5"></i>
+      </div>
+      <h3 class="text-sm sm:text-base font-bold text-white mb-1">Delete Flashcard?</h3>
+      <p class="text-xs text-slate-400 mb-5">This card will be removed from your collection.</p>
+      
+      <div class="flex items-center justify-center space-x-2.5">
+        <button onclick="closeDeleteModal()" class="flex-1 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 text-xs font-semibold">
+          Cancel
+        </button>
+        <button onclick="executeDeleteCard()" class="flex-1 px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white text-xs font-semibold shadow-lg shadow-rose-600/30">
+          Delete
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div id="toast-container" class="fixed bottom-16 sm:bottom-5 right-3 sm:right-5 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <script>
+    /* Default Initial Flashcards Deck */
+    const DEFAULT_DECK = [
+      {
+        id: "c1",
+        question: "What is a Closure in JavaScript and how is it used?",
+        answer: "A closure is the combination of a function bundled together with references to its lexical environment, enabling inner functions to access outer variables even after the parent function execution context has terminated.",
+        tag: "JavaScript",
+        mastered: false
+      },
+      {
+        id: "c2",
+        question: "Explain the difference between 'Event Bubbling' and 'Event Capturing'.",
+        answer: "Bubbling propagates upwards from the target element to ancestor nodes in the DOM tree, whereas Capturing propagates downwards from window/document root to the target element.",
+        tag: "Web APIs",
+        mastered: true
+      },
+      {
+        id: "c3",
+        question: "What does the CSS 'transform-style: preserve-3d' property do?",
+        answer: "It establishes a true 3D coordinate space for child elements, preventing them from being flattened into the plane of the parent element during 3D rotations and transforms.",
+        tag: "CSS",
+        mastered: false
+      },
+      {
+        id: "c4",
+        question: "What is the primary role of ATP (Adenosine Triphosphate) in cellular biology?",
+        answer: "ATP acts as the universal chemical energy currency of biological cells, transferring energy via hydrolysis of its phosphoanhydride bonds to drive essential metabolic reactions.",
+        tag: "Biology",
+        mastered: false
+      },
+      {
+        id: "c5",
+        question: "What is the Time Complexity of searching a balanced Binary Search Tree (BST)?",
+        answer: "O(log n) on average, because half the candidate tree nodes are pruned at each traversal comparison.",
+        tag: "Algorithms",
+        mastered: false
+      }
+    ];
+
+    /* Application State Variables */
+    let deck = [];
+    let activeView = 'grid'; // 'grid' | 'study' | 'scan'
+    let currentStudyIndex = 0;
+    let currentFilterTag = 'All';
+    let searchQuery = '';
+    let soundEnabled = true;
+    let cardPendingDeleteId = null;
+
+    /* Font Size System State (Default 18px) */
+    let currentFontSize = 18;
+    const DEFAULT_FONT_SIZE = 18;
+    const MIN_FONT_SIZE = 12;
+    const MAX_FONT_SIZE = 36;
+
+    // Incoming Shared Deck State
+    let pendingSharedDeck = null;
+
+    // Image Upload & AI Analysis State
+    let uploadedImageBase64 = null;
+    let uploadedImageMimeType = 'image/png';
+    let uploadedImageFileName = '';
+    let latestAiResult = null;
+
+    // 3D Card flip tracking
+    const flippedCardIds = new Set();
+    let isStudyCardFlipped = false;
+    let qrCodeInstance = null;
+
+    /* Theme Presets */
+    const THEMES = {
+      midnight: {
+        bgGradient: 'radial-gradient(circle at 15% 15%, #1e1b4b 0%, #0b1120 75%)',
+        cardFront: '#1e293b',
+        cardBack: '#312e81',
+        cardBorder: 'rgba(255, 255, 255, 0.08)',
+        textFront: '#f8fafc',
+        textBack: '#ffffff',
+        accent: '#6366f1'
+      },
+      cyber: {
+        bgGradient: 'radial-gradient(circle at 20% 20%, #3b0764 0%, #030712 80%)',
+        cardFront: '#180828',
+        cardBack: '#581c87',
+        cardBorder: 'rgba(236, 72, 153, 0.25)',
+        textFront: '#fdf4ff',
+        textBack: '#fae8ff',
+        accent: '#ec4899'
+      },
+      sunset: {
+        bgGradient: 'linear-gradient(135deg, #451a03 0%, #2e1065 50%, #0c0a09 100%)',
+        cardFront: '#292524',
+        cardBack: '#7c2d12',
+        cardBorder: 'rgba(251, 146, 60, 0.2)',
+        textFront: '#fff7ed',
+        textBack: '#ffffff',
+        accent: '#f97316'
+      },
+      forest: {
+        bgGradient: 'radial-gradient(circle at 20% 20%, #064e3b 0%, #022c22 45%, #050b0a 90%)',
+        cardFront: '#062e24',
+        cardBack: '#047857',
+        cardBorder: 'rgba(52, 211, 153, 0.2)',
+        textFront: '#ecfdf5',
+        textBack: '#ffffff',
+        accent: '#10b981'
+      },
+      'clean-light': {
+        bgGradient: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+        cardFront: '#ffffff',
+        cardBack: '#0284c7',
+        cardBorder: 'rgba(0, 0, 0, 0.1)',
+        textFront: '#0f172a',
+        textBack: '#ffffff',
+        accent: '#0284c7'
+      }
+    };
+
+    /* ==========================================================================
+       PRIMARY FEATURE: FONT SIZE CUSTOMIZATION SYSTEM
+       ========================================================================== */
+
+    function initFontSize() {
+      const savedFontSize = localStorage.getItem('flashcard_card_font_size');
+      if (savedFontSize) {
+        const parsed = parseInt(savedFontSize, 10);
+        if (!isNaN(parsed) && parsed >= MIN_FONT_SIZE && parsed <= MAX_FONT_SIZE) {
+          currentFontSize = parsed;
+        }
+      }
+      applyFontSize(currentFontSize, false);
+    }
+
+    function applyFontSize(size, notify = true) {
+      currentFontSize = Math.min(MAX_FONT_SIZE, Math.max(MIN_FONT_SIZE, size));
+
+      // Calculate responsive card & study mode font sizes and proportional line-heights
+      const cardFontSize = currentFontSize;
+      const cardLineHeight = Math.max(1.3, (1.6 - (currentFontSize - 12) * 0.01)).toFixed(2);
+      
+      // Study card scales proportionally with comfort cap
+      const studyFontSize = Math.round(currentFontSize * 1.33);
+      const studyLineHeight = Math.max(1.25, (1.5 - (studyFontSize - 16) * 0.008)).toFixed(2);
+
+      const root = document.documentElement;
+      root.style.setProperty('--card-font-size', `${cardFontSize}px`);
+      root.style.setProperty('--card-line-height', `${cardLineHeight}`);
+      root.style.setProperty('--study-font-size', `${studyFontSize}px`);
+      root.style.setProperty('--study-line-height', `${studyLineHeight}`);
+
+      // Persist to browser LocalStorage
+      localStorage.setItem('flashcard_card_font_size', currentFontSize.toString());
+
+      // Update all UI labels and badges
+      updateFontUiIndicators();
+
+      if (notify) {
+        playAudioTone('flip');
+      }
+    }
+
+    function setFontSize(size) {
+      applyFontSize(size, true);
+      showToast(`Font Size: ${currentFontSize}px`, 'info');
+    }
+
+    function stepFontSize(delta) {
+      const newSize = currentFontSize + delta;
+      if (newSize < MIN_FONT_SIZE) {
+        showToast(`Minimum font size is ${MIN_FONT_SIZE}px`, 'info');
+        return;
+      }
+      if (newSize > MAX_FONT_SIZE) {
+        showToast(`Maximum font size is ${MAX_FONT_SIZE}px`, 'info');
+        return;
+      }
+      applyFontSize(newSize, true);
+      showToast(`Font Size: ${currentFontSize}px`, 'info');
+    }
+
+    function handleSliderChange(val) {
+      const parsed = parseInt(val, 10);
+      if (!isNaN(parsed)) {
+        applyFontSize(parsed, false);
+      }
+    }
+
+    function updateFontUiIndicators() {
+      const percentage = Math.round((currentFontSize / DEFAULT_FONT_SIZE) * 100);
+      const labelText = `${currentFontSize}px`;
+      const fullText = `${currentFontSize}px (${percentage}%)`;
+
+      // Header labels
+      const navLabel = document.getElementById('nav-font-size-label');
+      if (navLabel) navLabel.textContent = labelText;
+      const mobileNavLabel = document.getElementById('mobile-nav-font-label');
+      if (mobileNavLabel) mobileNavLabel.textContent = labelText;
+
+      // In-Grid badge
+      const gridBadge = document.getElementById('grid-font-size-badge');
+      if (gridBadge) gridBadge.textContent = labelText;
+
+      // In-Study toolbar badge
+      const studyBadge = document.getElementById('study-font-badge');
+      if (studyBadge) studyBadge.textContent = labelText;
+
+      // Mobile bottom bar badge
+      const mobileBottom = document.getElementById('mobile-bottom-font-indicator');
+      if (mobileBottom) mobileBottom.textContent = labelText;
+
+      // Modal readout & slider
+      const modalReadout = document.getElementById('font-modal-readout');
+      if (modalReadout) modalReadout.textContent = fullText;
+      const slider = document.getElementById('font-size-slider');
+      if (slider) slider.value = currentFontSize;
+
+      // Highlight active preset pill in modal
+      const presets = [14, 18, 22, 28];
+      presets.forEach(p => {
+        const btn = document.getElementById(`preset-btn-${p}`);
+        if (btn) {
+          if (p === currentFontSize) {
+            btn.className = "py-2 px-2.5 rounded-xl border text-xs font-semibold text-center transition-all bg-indigo-600 text-white border-indigo-500 shadow-md";
+          } else {
+            btn.className = "py-2 px-2.5 rounded-xl border text-xs font-semibold text-center transition-all bg-white/5 border-white/10 text-slate-300 hover:text-white";
+          }
+        }
+      });
+    }
+
+    function openFontModal() {
+      const modal = document.getElementById('font-modal');
+      updateFontUiIndicators();
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeFontModal() {
+      document.getElementById('font-modal').classList.add('hidden');
+    }
+
+    /* Web Audio Sound Engine */
+    let audioCtx = null;
+    function getAudioContext() {
+      if (!audioCtx) {
+        const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+        if (AudioContextClass) audioCtx = new AudioContextClass();
+      }
+      if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
+      return audioCtx;
+    }
+
+    function playAudioTone(type) {
+      if (!soundEnabled) return;
+      try {
+        const ctx = getAudioContext();
+        if (!ctx) return;
+        const now = ctx.currentTime;
+
+        if (type === 'flip') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(320, now);
+          osc.frequency.exponentialRampToValueAtTime(140, now + 0.12);
+          gain.gain.setValueAtTime(0.1, now);
+          gain.gain.linearRampToValueAtTime(0.01, now + 0.12);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start(now);
+          osc.stop(now + 0.12);
+        } else if (type === 'success') {
+          const osc1 = ctx.createOscillator();
+          const osc2 = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc1.type = 'sine';
+          osc2.type = 'sine';
+          osc1.frequency.setValueAtTime(587.33, now); // D5
+          osc2.frequency.setValueAtTime(880.00, now); // A5
+          gain.gain.setValueAtTime(0.12, now);
+          gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+          osc1.connect(gain);
+          osc2.connect(gain);
+          gain.connect(ctx.destination);
+          osc1.start(now);
+          osc2.start(now);
+          osc1.stop(now + 0.3);
+          osc2.stop(now + 0.3);
+        } else if (type === 'shuffle') {
+          for (let i = 0; i < 3; i++) {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(260 + i * 80, now + i * 0.05);
+            gain.gain.setValueAtTime(0.06, now + i * 0.05);
+            gain.gain.linearRampToValueAtTime(0.001, now + i * 0.05 + 0.04);
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.start(now + i * 0.05);
+            osc.stop(now + i * 0.05 + 0.05);
+          }
+        }
+      } catch (e) {}
+    }
+
+    function toggleAudio() {
+      soundEnabled = !soundEnabled;
+      const soundBtn = document.getElementById('sound-btn');
+      const mobileSoundBtn = document.getElementById('mobile-sound-btn');
+      const icon = soundEnabled ? 'volume-2' : 'volume-x';
+      if (soundBtn) soundBtn.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i>`;
+      if (mobileSoundBtn) mobileSoundBtn.innerHTML = `<i data-lucide="${icon}" class="w-4 h-4"></i>`;
+      lucide.createIcons();
+      showToast(soundEnabled ? 'Audio feedback enabled' : 'Audio muted', 'info');
+    }
+
+    /* Share & Export Capabilities */
+    function generateShareableLink() {
+      const cleanData = deck.map(c => ({
+        q: c.question,
+        a: c.answer,
+        t: c.tag,
+        m: c.mastered ? 1 : 0
+      }));
+      const jsonStr = JSON.stringify(cleanData);
+      const encoded = btoa(encodeURIComponent(jsonStr));
+      return window.location.origin + window.location.pathname + '#share=' + encoded;
+    }
+
+    function openShareModal() {
+      const modal = document.getElementById('share-modal');
+      const linkInput = document.getElementById('share-link-input');
+      const qrContainer = document.getElementById('share-qrcode-container');
+      
+      const shareUrl = generateShareableLink();
+      linkInput.value = shareUrl;
+
+      qrContainer.innerHTML = '';
+      try {
+        qrCodeInstance = new QRCode(qrContainer, {
+          text: shareUrl,
+          width: 170,
+          height: 170,
+          colorDark: "#0f172a",
+          colorLight: "#ffffff",
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } catch (e) {
+        qrContainer.innerHTML = '<span class="text-xs text-slate-500 p-4">QR unavailable</span>';
+      }
+
+      switchShareTab('link');
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeShareModal() {
+      document.getElementById('share-modal').classList.add('hidden');
+    }
+
+    function switchShareTab(tab) {
+      const linkTabBtn = document.getElementById('share-tab-link');
+      const exportTabBtn = document.getElementById('share-tab-export');
+      const linkContent = document.getElementById('share-content-link');
+      const exportContent = document.getElementById('share-content-export');
+
+      if (tab === 'link') {
+        linkTabBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition-all";
+        exportTabBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all";
+        linkContent.classList.remove('hidden');
+        exportContent.classList.add('hidden');
+      } else {
+        exportTabBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 text-white transition-all";
+        linkTabBtn.className = "flex-1 py-1.5 text-xs font-semibold rounded-lg text-slate-400 hover:text-white transition-all";
+        exportContent.classList.remove('hidden');
+        linkContent.classList.add('hidden');
+      }
+      lucide.createIcons();
+    }
+
+    function copyShareLink() {
+      const linkInput = document.getElementById('share-link-input');
+      linkInput.select();
+      document.execCommand('copy');
+      
+      const btnText = document.getElementById('copy-share-text');
+      btnText.textContent = 'Copied!';
+      showToast('Share link copied to clipboard!', 'success');
+      setTimeout(() => {
+        btnText.textContent = 'Copy';
+      }, 2000);
+    }
+
+    async function triggerNativeWebShare() {
+      const shareUrl = generateShareableLink();
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: 'FlashMaster Pro Study Deck',
+            text: `Study this flashcard deck with ${deck.length} cards on your phone!`,
+            url: shareUrl
+          });
+          showToast('Shared successfully!', 'success');
+        } catch (err) {
+          if (err.name !== 'AbortError') {
+            copyShareLink();
+          }
+        }
+      } else {
+        copyShareLink();
+        showToast('Web Share not supported; link copied to clipboard!', 'info');
+      }
+    }
+
+    function exportDeckAsJson() {
+      const exportObject = {
+        title: "FlashMaster Pro Deck",
+        exportDate: new Date().toISOString(),
+        cardCount: deck.length,
+        cards: deck
+      };
+
+      const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportObject, null, 2));
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", dataStr);
+      downloadAnchor.setAttribute("download", `Flashcards_Deck_${Date.now()}.json`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      playAudioTone('success');
+      showToast('Deck exported as JSON file!', 'success');
+    }
+
+    function exportDeckAsCsv() {
+      let csvContent = "data:text/csv;charset=utf-8,Question,Answer,Category,Mastered\n";
+      deck.forEach(c => {
+        const q = `"${(c.question || '').replace(/"/g, '""')}"`;
+        const a = `"${(c.answer || '').replace(/"/g, '""')}"`;
+        const t = `"${(c.tag || 'General').replace(/"/g, '""')}"`;
+        const m = c.mastered ? "Yes" : "No";
+        csvContent += `${q},${a},${t},${m}\n`;
+      });
+
+      const encodedUri = encodeURI(csvContent);
+      const downloadAnchor = document.createElement('a');
+      downloadAnchor.setAttribute("href", encodedUri);
+      downloadAnchor.setAttribute("download", `Flashcards_Deck_${Date.now()}.csv`);
+      document.body.appendChild(downloadAnchor);
+      downloadAnchor.click();
+      downloadAnchor.remove();
+      playAudioTone('success');
+      showToast('Deck exported as CSV spreadsheet!', 'success');
+    }
+
+    function openImportModal() {
+      document.getElementById('import-modal').classList.remove('hidden');
+      document.getElementById('import-text-input').value = '';
+      document.getElementById('import-file-input').value = '';
+      lucide.createIcons();
+    }
+
+    function closeImportModal() {
+      document.getElementById('import-modal').classList.add('hidden');
+    }
+
+    function handleImportFile(event) {
+      const file = event.target.files?.[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        document.getElementById('import-text-input').value = e.target.result;
+      };
+      reader.readAsText(file);
+    }
+
+    function executeTextImport() {
+      const rawText = document.getElementById('import-text-input').value.trim();
+      if (!rawText) {
+        showToast('Please select a file or paste JSON data', 'info');
+        return;
+      }
+
+      try {
+        const parsed = JSON.parse(rawText);
+        let importedCards = [];
+
+        if (Array.isArray(parsed)) {
+          importedCards = parsed;
+        } else if (parsed.cards && Array.isArray(parsed.cards)) {
+          importedCards = parsed.cards;
+        } else {
+          throw new Error('Unrecognized JSON flashcard schema.');
+        }
+
+        const validCards = importedCards.map((c, i) => ({
+          id: 'imp_' + Date.now() + '_' + i,
+          question: c.question || c.q || 'Untitled Question',
+          answer: c.answer || c.a || 'No answer provided.',
+          tag: c.tag || c.t || 'Imported',
+          mastered: Boolean(c.mastered || c.m)
+        }));
+
+        if (validCards.length === 0) {
+          throw new Error('No valid cards found in dataset.');
+        }
+
+        const mode = document.querySelector('input[name="import-mode"]:checked')?.value || 'merge';
+        if (mode === 'replace') {
+          deck = validCards;
+        } else {
+          deck = [...validCards, ...deck];
+        }
+
+        saveDeckToStorage();
+        closeImportModal();
+        renderFilterTags();
+        renderCurrentView();
+        playAudioTone('success');
+        showToast(`Successfully imported ${validCards.length} flashcards!`, 'success');
+      } catch (err) {
+        showToast(`Import error: ${err.message}`, 'info');
+      }
+    }
+
+    function checkIncomingSharedHash() {
+      const hash = window.location.hash;
+      if (hash && hash.startsWith('#share=')) {
+        try {
+          const encoded = hash.replace('#share=', '');
+          const decoded = decodeURIComponent(atob(encoded));
+          const parsed = JSON.parse(decoded);
+
+          if (Array.isArray(parsed) && parsed.length > 0) {
+            pendingSharedDeck = parsed.map((item, idx) => ({
+              id: 'shared_' + Date.now() + '_' + idx,
+              question: item.q || item.question || 'Shared Question',
+              answer: item.a || item.answer || 'Shared Answer',
+              tag: item.t || item.tag || 'Shared',
+              mastered: Boolean(item.m || item.mastered)
+            }));
+
+            document.getElementById('shared-deck-banner').classList.remove('hidden');
+            document.getElementById('shared-deck-count').textContent = `${pendingSharedDeck.length} cards`;
+            lucide.createIcons();
+          }
+        } catch (e) {
+          console.warn("Could not decode shared deck hash", e);
+        }
+      }
+    }
+
+    function dismissSharedBanner() {
+      document.getElementById('shared-deck-banner').classList.add('hidden');
+      pendingSharedDeck = null;
+      history.replaceState(null, null, window.location.pathname);
+    }
+
+    function openSharedPreviewModal() {
+      if (!pendingSharedDeck) return;
+      const modal = document.getElementById('shared-preview-modal');
+      const list = document.getElementById('shared-preview-cards-list');
+
+      list.innerHTML = pendingSharedDeck.map(c => `
+        <div class="bg-white/[0.03] border border-white/10 p-3 rounded-xl">
+          <div class="flex items-center gap-2 mb-1">
+            <span class="text-[10px] font-bold px-2 py-0.5 rounded bg-purple-500/20 text-purple-300 uppercase">${escapeHtml(c.tag)}</span>
+            <span class="text-xs font-semibold text-white">Q: ${escapeHtml(c.question)}</span>
+          </div>
+          <p class="text-xs text-slate-400 pl-2 border-l-2 border-purple-500/40">
+            A: ${escapeHtml(c.answer)}
+          </p>
+        </div>
+      `).join('');
+
+      modal.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeSharedPreviewModal() {
+      document.getElementById('shared-preview-modal').classList.add('hidden');
+    }
+
+    function confirmImportSharedDeck(replace = false) {
+      if (!pendingSharedDeck || pendingSharedDeck.length === 0) return;
+
+      if (replace) {
+        deck = [...pendingSharedDeck];
+      } else {
+        deck = [...pendingSharedDeck, ...deck];
+      }
+
+      saveDeckToStorage();
+      dismissSharedBanner();
+      closeSharedPreviewModal();
+      renderFilterTags();
+      renderCurrentView();
+      playAudioTone('success');
+      showToast(`Imported ${pendingSharedDeck.length} shared flashcards!`, 'success');
+    }
+
+    /* Mobile Touch Swipe Gestures */
+    let touchStartX = 0;
+    let touchStartY = 0;
+    let touchEndX = 0;
+    let touchEndY = 0;
+    let isSwiping = false;
+
+    function initTouchGestures() {
+      const container = document.getElementById('study-touch-wrapper');
+      if (!container) return;
+
+      container.addEventListener('touchstart', (e) => {
+        touchStartX = e.changedTouches[0].screenX;
+        touchStartY = e.changedTouches[0].screenY;
+        isSwiping = true;
+      }, { passive: true });
+
+      container.addEventListener('touchmove', (e) => {
+        if (!isSwiping) return;
+        const currentX = e.changedTouches[0].screenX;
+        const deltaX = currentX - touchStartX;
+        
+        if (Math.abs(deltaX) > 20) {
+          if (deltaX > 0) {
+            container.classList.add('swipe-right');
+            container.classList.remove('swipe-left');
+          } else {
+            container.classList.add('swipe-left');
+            container.classList.remove('swipe-right');
+          }
+        }
+      }, { passive: true });
+
+      container.addEventListener('touchend', (e) => {
+        if (!isSwiping) return;
+        touchEndX = e.changedTouches[0].screenX;
+        touchEndY = e.changedTouches[0].screenY;
+        isSwiping = false;
+
+        container.classList.remove('swipe-left', 'swipe-right');
+        handleSwipeGesture();
+      }, { passive: true });
+    }
+
+    function handleSwipeGesture() {
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      const horizontalThreshold = 45;
+
+      if (Math.abs(deltaX) > horizontalThreshold && Math.abs(deltaX) > Math.abs(deltaY)) {
+        if (deltaX < 0) {
+          studyNav(1); // Swipe Left -> Next Card
+        } else {
+          studyNav(-1); // Swipe Right -> Prev Card
+        }
+      }
+    }
+
+    function handleStudyCardClick() {
+      const distance = Math.hypot(touchEndX - touchStartX, touchEndY - touchStartY);
+      if (distance < 15 || touchStartX === 0) {
+        toggleStudyCardFlip();
+      }
+    }
+
+    function mobileNavAction(direction) {
+      if (activeView !== 'study') {
+        switchView('study');
+      }
+      studyNav(direction);
+    }
+
+    function mobileFlipAction() {
+      if (activeView !== 'study') {
+        switchView('study');
+      }
+      toggleStudyCardFlip();
+    }
+
+    function triggerCameraInput() {
+      document.getElementById('camera-file-input').click();
+    }
+
+    function triggerGalleryInput() {
+      document.getElementById('gallery-file-input').click();
+    }
+
+    function handleFileSelect(e) {
+      const file = e.target.files?.[0];
+      if (file) processImageFile(file);
+    }
+
+    function handleDragOver(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('dropzone').classList.add('border-purple-400', 'bg-purple-950/20');
+    }
+
+    function handleDragLeave(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('dropzone').classList.remove('border-purple-400', 'bg-purple-950/20');
+    }
+
+    function handleDrop(e) {
+      e.preventDefault();
+      e.stopPropagation();
+      document.getElementById('dropzone').classList.remove('border-purple-400', 'bg-purple-950/20');
+      const file = e.dataTransfer.files?.[0];
+      if (file && file.type.startsWith('image/')) {
+        processImageFile(file);
+      } else {
+        showToast('Please drop a valid image file', 'info');
+      }
+    }
+
+    window.addEventListener('paste', (e) => {
+      const items = e.clipboardData?.items;
+      if (!items) return;
+      for (const item of items) {
+        if (item.type.startsWith('image/')) {
+          const file = item.getAsFile();
+          if (file) {
+            switchView('scan');
+            processImageFile(file);
+            showToast('Image pasted from clipboard!', 'success');
+            break;
+          }
+        }
+      }
+    });
+
+    function processImageFile(file) {
+      uploadedImageFileName = file.name || 'Captured_Material.png';
+      uploadedImageMimeType = file.type || 'image/png';
+
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const fullDataUrl = evt.target.result;
+        uploadedImageBase64 = fullDataUrl.split(',')[1];
+
+        const previewImg = document.getElementById('image-preview');
+        previewImg.src = fullDataUrl;
+
+        document.getElementById('preview-file-name').textContent = uploadedImageFileName;
+        document.getElementById('preview-file-size').textContent = (file.size / 1024).toFixed(1) + ' KB';
+
+        document.getElementById('dropzone-empty').classList.add('hidden');
+        document.getElementById('dropzone-preview-container').classList.remove('hidden');
+        document.getElementById('dropzone-preview-container').classList.add('flex');
+        document.getElementById('analyze-material-btn').disabled = false;
+
+        playAudioTone('success');
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function removeUploadedImage() {
+      uploadedImageBase64 = null;
+      document.getElementById('gallery-file-input').value = '';
+      document.getElementById('camera-file-input').value = '';
+      document.getElementById('dropzone-preview-container').classList.add('hidden');
+      document.getElementById('dropzone-preview-container').classList.remove('flex');
+      document.getElementById('dropzone-empty').classList.remove('hidden');
+      document.getElementById('analyze-material-btn').disabled = true;
+    }
+
+    function loadSampleMaterial() {
+      const canvas = document.createElement('canvas');
+      canvas.width = 900;
+      canvas.height = 650;
+      const ctx = canvas.getContext('2d');
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      ctx.fillStyle = '#6366f1';
+      ctx.fillRect(40, 40, canvas.width - 80, 70);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 26px Inter, sans-serif';
+      ctx.fillText('BIOLOGY 101: Cellular Respiration & ATP Cycle', 60, 85);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 18px Inter, sans-serif';
+      ctx.fillText('1. Glycolysis (Cytosol)', 60, 160);
+      ctx.font = '15px Inter, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('• Glucose (6-carbon) splits into 2 Pyruvate molecules (3-carbon each).', 80, 190);
+      ctx.fillText('• Net Yield: 2 ATP (substrate-level) + 2 NADH molecules produced.', 80, 215);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 18px Inter, sans-serif';
+      ctx.fillText('2. The Krebs Cycle / Citric Acid Cycle (Mitochondrial Matrix)', 60, 270);
+      ctx.font = '15px Inter, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('• Acetyl-CoA combines with Oxaloacetate to form Citrate.', 80, 300);
+      ctx.fillText('• Major electron carriers produced: 6 NADH and 2 FADH2 per glucose.', 80, 325);
+
+      ctx.fillStyle = '#f8fafc';
+      ctx.font = 'bold 18px Inter, sans-serif';
+      ctx.fillText('3. Oxidative Phosphorylation & Electron Transport Chain (ETC)', 60, 380);
+      ctx.font = '15px Inter, sans-serif';
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillText('• Chemiosmosis: H+ gradient driven through ATP Synthase rotor.', 80, 410);
+      ctx.fillText('• Oxygen acts as the terminal electron acceptor, generating H2O.', 80, 435);
+      ctx.fillText('• Total Theoretical Yield: 30 to 32 ATP molecules per oxidized glucose.', 80, 460);
+
+      ctx.fillStyle = '#4f46e5';
+      ctx.fillRect(60, 500, canvas.width - 120, 80);
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'italic 16px Inter, sans-serif';
+      ctx.fillText('Key Exam Tip: Oxygen is strictly required for oxidative phosphorylation;', 80, 535);
+      ctx.fillText('without it, cells revert to fermentation (lactic acid or ethanol).', 80, 560);
+
+      const dataUrl = canvas.toDataURL('image/png');
+      uploadedImageBase64 = dataUrl.split(',')[1];
+      uploadedImageMimeType = 'image/png';
+      uploadedImageFileName = 'Sample_Cellular_Respiration_Notes.png';
+
+      const previewImg = document.getElementById('image-preview');
+      previewImg.src = dataUrl;
+      document.getElementById('preview-file-name').textContent = uploadedImageFileName;
+      document.getElementById('preview-file-size').textContent = '245 KB';
+
+      document.getElementById('dropzone-empty').classList.add('hidden');
+      document.getElementById('dropzone-preview-container').classList.remove('hidden');
+      document.getElementById('dropzone-preview-container').classList.add('flex');
+      document.getElementById('analyze-material-btn').disabled = false;
+
+      showToast('Sample Biology note loaded! Ready to analyze.', 'info');
+    }
+
+    function getApiKey() {
+      return window.GEMINI_API_KEY || localStorage.getItem('flashmaster_gemini_key') || "";
+    }
+
+    async function callGeminiMultimodal(base64Data, mimeType, prompt) {
+      const apiKey = getApiKey();
+      const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: prompt },
+              {
+                inlineData: {
+                  mimeType: mimeType,
+                  data: base64Data
+                }
+              }
+            ]
+          }
+        ],
+        generationConfig: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: "OBJECT",
+            properties: {
+              title: { type: "STRING" },
+              tag: { type: "STRING" },
+              overview: { type: "STRING" },
+              keyPoints: {
+                type: "ARRAY",
+                items: { type: "STRING" }
+              },
+              keyTerms: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    term: { type: "STRING" },
+                    definition: { type: "STRING" }
+                  },
+                  required: ["term", "definition"]
+                }
+              },
+              flashcards: {
+                type: "ARRAY",
+                items: {
+                  type: "OBJECT",
+                  properties: {
+                    question: { type: "STRING" },
+                    answer: { type: "STRING" },
+                    tag: { type: "STRING" }
+                  },
+                  required: ["question", "answer", "tag"]
+                }
+              }
+            },
+            required: ["title", "tag", "overview", "keyPoints", "keyTerms", "flashcards"]
+          }
+        }
+      };
+
+      let delay = 1000;
+      const maxRetries = 3;
+      for (let attempt = 0; attempt < maxRetries; attempt++) {
+        try {
+          const response = await fetch(apiUrl, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+
+          if (!response.ok) {
+            const errJson = await response.json().catch(() => ({}));
+            const errorMsg = errJson.error?.message || `HTTP ${response.status}`;
+            if (response.status === 429 || response.status >= 500) {
+              throw new Error(errorMsg);
+            }
+            throw new Error(`Gemini API Error: ${errorMsg}`);
+          }
+
+          const result = await response.json();
+          const candidate = result.candidates?.[0];
+          const text = candidate?.content?.parts?.[0]?.text;
+          if (!text) throw new Error("Empty response returned from Gemini.");
+          return JSON.parse(text);
+        } catch (err) {
+          if (attempt === maxRetries - 1) throw err;
+          await new Promise(res => setTimeout(res, delay));
+          delay *= 2;
+        }
+      }
+    }
+
+    async function startMaterialAnalysis() {
+      if (!uploadedImageBase64) return;
+
+      const btn = document.getElementById('analyze-material-btn');
+      const btnText = document.getElementById('analyze-btn-text');
+      const loadingCard = document.getElementById('ai-loading-card');
+      const placeholderCard = document.getElementById('ai-placeholder-card');
+      const outputContainer = document.getElementById('ai-output-container');
+      const scannerLine = document.getElementById('scanner-line');
+
+      btn.disabled = true;
+      btnText.textContent = 'Processing with Gemini...';
+      loadingCard.classList.remove('hidden');
+      loadingCard.classList.add('flex');
+      placeholderCard.classList.add('hidden');
+      outputContainer.classList.add('hidden');
+      scannerLine.classList.remove('hidden');
+
+      const systemPrompt = `You are a world-class academic tutor and study assistant. 
+Analyze the provided study material image (which may include textbook text, smartphone camera photos, handwritten notes, charts, or slides). 
+Extract the core educational concepts and generate:
+1. A concise, clear Subject Title and a Category Tag (e.g., Biology, CS, Chemistry, History).
+2. A structured concept overview paragraph.
+3. 3-5 high-impact bulleted Key Takeaways.
+4. 3-4 Core Terms and their concise definitions.
+5. 4 to 6 rigorous Question & Answer flashcard pairs targeting key exam concepts from this material.
+Format strictly matching the requested JSON schema.`;
+
+      try {
+        const result = await callGeminiMultimodal(uploadedImageBase64, uploadedImageMimeType, systemPrompt);
+        latestAiResult = result;
+        renderAiSummaryAndCards(result);
+        playAudioTone('success');
+        showToast('Material analysis & flashcards generated!', 'success');
+      } catch (err) {
+        showToast(`Analysis failed: ${err.message}`, 'info');
+        console.error(err);
+      } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Summarize & Generate Flashcards';
+        loadingCard.classList.add('hidden');
+        loadingCard.classList.remove('flex');
+        scannerLine.classList.add('hidden');
+      }
+    }
+
+    function renderAiSummaryAndCards(data) {
+      const outputContainer = document.getElementById('ai-output-container');
+      outputContainer.classList.remove('hidden');
+      outputContainer.classList.add('flex');
+
+      document.getElementById('ai-summary-title').textContent = data.title || 'Study Material Summary';
+      document.getElementById('ai-summary-tag').textContent = data.tag || 'Study Material';
+      document.getElementById('ai-summary-overview').textContent = data.overview || '';
+
+      const pointsList = document.getElementById('ai-summary-points');
+      pointsList.innerHTML = (data.keyPoints || []).map(pt => `
+        <li class="flex items-start gap-2">
+          <i data-lucide="check" class="w-3.5 h-3.5 text-purple-400 shrink-0 mt-0.5"></i>
+          <span>${escapeHtml(pt)}</span>
+        </li>
+      `).join('');
+
+      const termsGrid = document.getElementById('ai-summary-terms');
+      termsGrid.innerHTML = (data.keyTerms || []).map(item => `
+        <div class="bg-white/[0.03] border border-white/5 p-2.5 rounded-xl">
+          <span class="font-bold text-white text-[11px] block mb-0.5 text-purple-300">${escapeHtml(item.term)}</span>
+          <p class="text-[11px] text-slate-300 leading-relaxed">${escapeHtml(item.definition)}</p>
+        </div>
+      `).join('');
+
+      const cardsList = document.getElementById('ai-cards-preview-list');
+      const cards = data.flashcards || [];
+      document.getElementById('ai-card-count').textContent = cards.length;
+
+      cardsList.innerHTML = cards.map((c, idx) => `
+        <div class="bg-white/[0.03] hover:bg-white/[0.05] border border-white/10 p-3 rounded-xl transition-all flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+          <div class="flex-1 space-y-1">
+            <div class="flex items-center gap-1.5">
+              <span class="text-[9px] font-bold px-1.5 py-0.2 rounded bg-indigo-500/20 text-indigo-300 uppercase">${escapeHtml(c.tag || data.tag || 'AI-Card')}</span>
+              <span class="text-xs font-semibold text-white">Q: ${escapeHtml(c.question)}</span>
+            </div>
+            <p class="text-xs text-slate-400 pl-2 border-l-2 border-indigo-500/40">
+              A: ${escapeHtml(c.answer)}
+            </p>
+          </div>
+          <button 
+            onclick="addSingleAiCard(${idx})"
+            id="ai-add-btn-${idx}"
+            class="px-2.5 py-1.5 rounded-lg bg-white/5 hover:bg-indigo-600 text-slate-300 hover:text-white border border-white/10 text-xs font-semibold whitespace-nowrap transition-colors flex items-center gap-1"
+          >
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>Add to Deck</span>
+          </button>
+        </div>
+      `).join('');
+
+      lucide.createIcons();
+    }
+
+    function addSingleAiCard(index) {
+      if (!latestAiResult || !latestAiResult.flashcards?.[index]) return;
+      const c = latestAiResult.flashcards[index];
+      const newCard = {
+        id: 'card_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+        question: c.question,
+        answer: c.answer,
+        tag: c.tag || latestAiResult.tag || 'AI-Summary',
+        mastered: false
+      };
+      deck.unshift(newCard);
+      saveDeckToStorage();
+      renderFilterTags();
+      renderCurrentView();
+
+      const btn = document.getElementById(`ai-add-btn-${index}`);
+      if (btn) {
+        btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i> Added`;
+        btn.classList.add('bg-emerald-500/20', 'text-emerald-300', 'border-emerald-500/30');
+      }
+      playAudioTone('success');
+      showToast('Card added to your deck!', 'success');
+      lucide.createIcons();
+    }
+
+    function addAllAiCardsToDeck() {
+      if (!latestAiResult || !latestAiResult.flashcards) return;
+      const cards = latestAiResult.flashcards;
+      cards.forEach(c => {
+        deck.unshift({
+          id: 'card_' + Date.now() + '_' + Math.floor(Math.random() * 1000),
+          question: c.question,
+          answer: c.answer,
+          tag: c.tag || latestAiResult.tag || 'AI-Summary',
+          mastered: false
+        });
+      });
+      saveDeckToStorage();
+      renderFilterTags();
+      renderCurrentView();
+      playAudioTone('success');
+      showToast(`Added ${cards.length} cards to your flashcard deck!`, 'success');
+    }
+
+    function copySummaryToClipboard() {
+      if (!latestAiResult) return;
+      const points = (latestAiResult.keyPoints || []).map(p => `• ${p}`).join('\n');
+      const terms = (latestAiResult.keyTerms || []).map(t => `- ${t.term}: ${t.definition}`).join('\n');
+      const textToCopy = `=== ${latestAiResult.title || 'Summary'} ===\n\nOVERVIEW:\n${latestAiResult.overview}\n\nKEY PRINCIPLES:\n${points}\n\nKEY TERMS:\n${terms}`;
+      
+      const textArea = document.createElement('textarea');
+      textArea.value = textToCopy;
+      document.body.appendChild(textArea);
+      textArea.select();
+      document.execCommand('copy');
+      document.body.removeChild(textArea);
+
+      showToast('Summary copied to clipboard!', 'success');
+    }
+
+    function initApp() {
+      const savedDeck = localStorage.getItem('flashmaster_deck');
+      if (savedDeck) {
+        try {
+          deck = JSON.parse(savedDeck);
+        } catch (e) {
+          deck = [...DEFAULT_DECK];
+        }
+      } else {
+        deck = [...DEFAULT_DECK];
+      }
+
+      // Initialize Font Size System from LocalStorage
+      initFontSize();
+
+      const savedTheme = localStorage.getItem('flashmaster_theme');
+      if (savedTheme && THEMES[savedTheme]) {
+        applyThemePreset(savedTheme, false);
+      }
+
+      const customKey = localStorage.getItem('flashmaster_gemini_key');
+      if (customKey) {
+        const input = document.getElementById('custom-api-key-input');
+        if (input) input.value = customKey;
+      }
+
+      checkIncomingSharedHash();
+      initTouchGestures();
+
+      renderFilterTags();
+      renderCurrentView();
+      window.addEventListener('keydown', handleGlobalKeydown);
+      lucide.createIcons();
+    }
+
+    function saveDeckToStorage() {
+      localStorage.setItem('flashmaster_deck', JSON.stringify(deck));
+    }
+
+    function getFilteredDeck() {
+      return deck.filter(card => {
+        const matchesTag = currentFilterTag === 'All' || card.tag.toLowerCase() === currentFilterTag.toLowerCase();
+        const matchesSearch = searchQuery === '' || 
+          card.question.toLowerCase().includes(searchQuery.toLowerCase()) || 
+          card.answer.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          card.tag.toLowerCase().includes(searchQuery.toLowerCase());
+        return matchesTag && matchesSearch;
+      });
+    }
+
+    function handleSearch(query) {
+      searchQuery = query.trim();
+      const clearBtn = document.getElementById('search-clear-btn');
+      if (searchQuery.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+      currentStudyIndex = 0;
+      renderCurrentView();
+    }
+
+    function clearSearch() {
+      const input = document.getElementById('search-input');
+      input.value = '';
+      searchQuery = '';
+      currentFilterTag = 'All';
+      document.getElementById('search-clear-btn').classList.add('hidden');
+      renderFilterTags();
+      renderCurrentView();
+    }
+
+    function filterByTag(tag) {
+      currentFilterTag = tag;
+      currentStudyIndex = 0;
+      renderFilterTags();
+      renderCurrentView();
+    }
+
+    function renderFilterTags() {
+      const tagsContainer = document.getElementById('tags-container');
+      const uniqueTags = ['All', ...new Set(deck.map(c => c.tag))];
+
+      tagsContainer.innerHTML = uniqueTags.map(tag => {
+        const isActive = tag.toLowerCase() === currentFilterTag.toLowerCase();
+        const count = tag === 'All' ? deck.length : deck.filter(c => c.tag.toLowerCase() === tag.toLowerCase()).length;
+        
+        return `
+          <button 
+            onclick="filterByTag('${tag.replace(/'/g, "\\'")}')"
+            class="px-2.5 py-1 rounded-lg text-xs font-semibold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+              isActive 
+                ? 'bg-indigo-600 text-white shadow-sm' 
+                : 'bg-white/5 hover:bg-white/10 text-slate-400 hover:text-white border border-white/5'
+            }"
+          >
+            <span>${tag}</span>
+            <span class="text-[10px] px-1.5 py-0.2 rounded-full ${isActive ? 'bg-indigo-800 text-indigo-200' : 'bg-white/10 text-slate-400'}">${count}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function switchView(view) {
+      activeView = view;
+      const tabGrid = document.getElementById('view-tab-grid');
+      const tabStudy = document.getElementById('view-tab-study');
+      const tabScan = document.getElementById('view-tab-scan');
+
+      const gridSection = document.getElementById('grid-view-section');
+      const studySection = document.getElementById('study-view-section');
+      const scanSection = document.getElementById('scan-view-section');
+
+      [tabGrid, tabStudy, tabScan].forEach(tab => {
+        tab.className = "flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-medium transition-all duration-200 text-slate-400 hover:text-white";
+      });
+
+      gridSection.classList.add('hidden');
+      studySection.classList.add('hidden');
+      studySection.classList.remove('flex');
+      scanSection.classList.add('hidden');
+      scanSection.classList.remove('flex');
+
+      if (view === 'grid') {
+        tabGrid.className = "flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-indigo-600 text-white shadow-md";
+        gridSection.classList.remove('hidden');
+        renderGridView(getFilteredDeck());
+      } else if (view === 'study') {
+        tabStudy.className = "flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-indigo-600 text-white shadow-md";
+        studySection.classList.remove('hidden');
+        studySection.classList.add('flex');
+        renderStudyView(getFilteredDeck());
+      } else if (view === 'scan') {
+        tabScan.className = "flex-1 sm:flex-initial flex items-center justify-center space-x-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all duration-200 bg-purple-600 text-white shadow-md";
+        scanSection.classList.remove('hidden');
+        scanSection.classList.add('flex');
+      }
+
+      lucide.createIcons();
+    }
+
+    function renderCurrentView() {
+      const filtered = getFilteredDeck();
+      document.getElementById('active-card-count').textContent = filtered.length;
+      if (activeView === 'grid') {
+        renderGridView(filtered);
+      } else if (activeView === 'study') {
+        renderStudyView(filtered);
+      }
+      lucide.createIcons();
+    }
+
+    function renderGridView(cards) {
+      const grid = document.getElementById('cards-grid');
+      const emptyState = document.getElementById('grid-empty-state');
+
+      if (cards.length === 0) {
+        grid.innerHTML = '';
+        emptyState.classList.remove('hidden');
+        emptyState.classList.add('flex');
+        return;
+      }
+
+      emptyState.classList.add('hidden');
+      emptyState.classList.remove('flex');
+
+      grid.innerHTML = cards.map(card => {
+        const isFlipped = flippedCardIds.has(card.id);
+        const flipClass = isFlipped ? 'is-flipped' : '';
+        const masteredBadge = card.mastered 
+          ? '<span class="flex items-center gap-0.5 text-[9px] text-emerald-400 bg-emerald-500/10 px-1.5 py-0.5 rounded-full border border-emerald-500/20"><i data-lucide="check" class="w-3 h-3"></i> Mastered</span>' 
+          : '';
+
+        return `
+          <div class="perspective-container h-60 sm:h-64 w-full select-none">
+            <div 
+              id="card-inner-${card.id}" 
+              class="flip-card-inner ${flipClass} cursor-pointer group"
+              onclick="toggleCardFlip('${card.id}')"
+            >
+              <!-- Front (Question) with Scaled Font -->
+              <div class="flip-card-front p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 group-hover:border-indigo-500/40">
+                <div class="flex items-start justify-between gap-1.5">
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-indigo-500/15 text-indigo-300 border border-indigo-500/20 uppercase tracking-wider">
+                    ${escapeHtml(card.tag)}
+                  </span>
+                  <div class="flex items-center space-x-1" onclick="event.stopPropagation()">
+                    ${masteredBadge}
+                    <button onclick="openCardModal('${card.id}')" title="Edit Card" class="p-1 rounded text-slate-400 hover:text-white hover:bg-white/10 transition-colors">
+                      <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                    </button>
+                    <button onclick="promptDeleteCard('${card.id}')" title="Delete Card" class="p-1 rounded text-slate-400 hover:text-rose-400 hover:bg-rose-500/10 transition-colors">
+                      <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Dynamically sized scrollable question container -->
+                <div class="my-auto py-2 overflow-y-auto max-h-32 sm:max-h-36 custom-card-scroll pr-1">
+                  <p class="dynamic-card-text font-semibold text-slate-100 transition-all duration-150">
+                    ${escapeHtml(card.question)}
+                  </p>
+                </div>
+
+                <div class="flex items-center justify-between pt-2.5 border-t border-white/10 text-[10px] sm:text-[11px] text-slate-400">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="mouse-pointer-click" class="w-3 h-3 text-indigo-400"></i>
+                    Tap to flip
+                  </span>
+                  <span class="text-slate-500 font-mono text-[9px]">QUESTION</span>
+                </div>
+              </div>
+
+              <!-- Back (Answer) with Scaled Font -->
+              <div class="flip-card-back p-4 sm:p-5 flex flex-col justify-between transition-all duration-300 group-hover:border-white/30">
+                <div class="flex items-start justify-between gap-1.5">
+                  <span class="text-[10px] font-semibold px-2 py-0.5 rounded-md bg-white/20 text-white border border-white/20 uppercase tracking-wider">
+                    Answer
+                  </span>
+                  <div class="flex items-center space-x-1" onclick="event.stopPropagation()">
+                    <button onclick="toggleCardMastery('${card.id}')" title="Toggle Mastered" class="p-1 rounded text-white/80 hover:text-white hover:bg-white/10">
+                      <i data-lucide="${card.mastered ? 'check-circle' : 'circle'}" class="w-4 h-4 text-emerald-300"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Dynamically sized scrollable answer container -->
+                <div class="my-auto py-1 overflow-y-auto max-h-32 sm:max-h-36 custom-card-scroll pr-1">
+                  <p class="dynamic-card-text font-normal text-white transition-all duration-150">
+                    ${escapeHtml(card.answer)}
+                  </p>
+                </div>
+
+                <div class="flex items-center justify-between pt-2.5 border-t border-white/10 text-[10px] sm:text-[11px] text-white/70">
+                  <span class="flex items-center gap-1">
+                    <i data-lucide="rotate-3d" class="w-3 h-3"></i>
+                    Tap to flip back
+                  </span>
+                  <span class="text-white/40 font-mono text-[9px]">ANSWER</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function toggleCardFlip(cardId) {
+      playAudioTone('flip');
+      const inner = document.getElementById(`card-inner-${cardId}`);
+      if (flippedCardIds.has(cardId)) {
+        flippedCardIds.delete(cardId);
+        if (inner) inner.classList.remove('is-flipped');
+      } else {
+        flippedCardIds.add(cardId);
+        if (inner) inner.classList.add('is-flipped');
+      }
+    }
+
+    function flipAllCards(flipToAnswer) {
+      playAudioTone('flip');
+      const filtered = getFilteredDeck();
+      filtered.forEach(card => {
+        const inner = document.getElementById(`card-inner-${card.id}`);
+        if (flipToAnswer) {
+          flippedCardIds.add(card.id);
+          if (inner) inner.classList.add('is-flipped');
+        } else {
+          flippedCardIds.delete(card.id);
+          if (inner) inner.classList.remove('is-flipped');
+        }
+      });
+      showToast(flipToAnswer ? 'Flipped cards to Answers' : 'Reset cards to Questions', 'info');
+    }
+
+    function renderStudyView(cards) {
+      const studyCardInner = document.getElementById('study-card-inner');
+      if (cards.length === 0) return;
+
+      if (currentStudyIndex >= cards.length) {
+        currentStudyIndex = Math.max(0, cards.length - 1);
+      }
+
+      const card = cards[currentStudyIndex];
+      isStudyCardFlipped = false;
+      studyCardInner.classList.remove('is-flipped');
+
+      document.getElementById('study-card-q').textContent = card.question;
+      document.getElementById('study-card-a').textContent = card.answer;
+      document.getElementById('study-card-tag-front').textContent = card.tag;
+      document.getElementById('study-card-tag-back').textContent = card.tag;
+
+      const progressPercent = Math.round(((currentStudyIndex + 1) / cards.length) * 100);
+      document.getElementById('study-counter').textContent = `Card ${currentStudyIndex + 1} of ${cards.length}`;
+      document.getElementById('study-percent').textContent = `${progressPercent}% Completed`;
+      document.getElementById('study-progress-fill').style.width = `${progressPercent}%`;
+
+      const prevBtn = document.getElementById('study-prev-btn');
+      const nextBtn = document.getElementById('study-next-btn');
+      if (prevBtn) prevBtn.disabled = currentStudyIndex === 0;
+      if (nextBtn) nextBtn.disabled = currentStudyIndex === cards.length - 1;
+
+      const masteredBtn = document.getElementById('study-mastered-btn');
+      const masteredLabel = document.getElementById('study-mastered-label');
+      if (masteredBtn && masteredLabel) {
+        if (card.mastered) {
+          masteredLabel.textContent = 'Mastered';
+          masteredBtn.className = "flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 text-xs font-semibold transition-all";
+        } else {
+          masteredLabel.textContent = 'Mark Mastered';
+          masteredBtn.className = "flex items-center space-x-1.5 px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10 text-xs font-semibold transition-all";
+        }
+      }
+
+      lucide.createIcons();
+    }
+
+    function toggleStudyCardFlip() {
+      playAudioTone('flip');
+      isStudyCardFlipped = !isStudyCardFlipped;
+      const inner = document.getElementById('study-card-inner');
+      if (isStudyCardFlipped) inner.classList.add('is-flipped');
+      else inner.classList.remove('is-flipped');
+    }
+
+    function studyNav(direction) {
+      const filtered = getFilteredDeck();
+      const newIndex = currentStudyIndex + direction;
+      if (newIndex >= 0 && newIndex < filtered.length) {
+        currentStudyIndex = newIndex;
+        playAudioTone('flip');
+        renderStudyView(filtered);
+      }
+    }
+
+    function toggleCardMastery(cardId) {
+      const card = deck.find(c => c.id === cardId);
+      if (card) {
+        card.mastered = !card.mastered;
+        saveDeckToStorage();
+        if (card.mastered) playAudioTone('success');
+        renderCurrentView();
+        showToast(card.mastered ? 'Card marked as mastered!' : 'Mastery status cleared', 'success');
+      }
+    }
+
+    function toggleCurrentMastery() {
+      const filtered = getFilteredDeck();
+      if (filtered.length > 0) {
+        const card = filtered[currentStudyIndex];
+        toggleCardMastery(card.id);
+      }
+    }
+
+    function editCurrentStudyCard() {
+      const filtered = getFilteredDeck();
+      if (filtered.length > 0) {
+        openCardModal(filtered[currentStudyIndex].id);
+      }
+    }
+
+    function shuffleDeck() {
+      playAudioTone('shuffle');
+      for (let i = deck.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [deck[i], deck[j]] = [deck[j], deck[i]];
+      }
+      currentStudyIndex = 0;
+      flippedCardIds.clear();
+      saveDeckToStorage();
+      renderCurrentView();
+      showToast('Deck shuffled!', 'success');
+    }
+
+    function openCardModal(cardId = null) {
+      const modal = document.getElementById('card-modal');
+      const form = document.getElementById('flashcard-form');
+      const modalTitle = document.getElementById('card-modal-title');
+      const idInput = document.getElementById('card-edit-id');
+      const qInput = document.getElementById('card-question-input');
+      const aInput = document.getElementById('card-answer-input');
+      const tagInput = document.getElementById('card-tag-input');
+
+      if (cardId) {
+        const card = deck.find(c => c.id === cardId);
+        if (card) {
+          idInput.value = card.id;
+          qInput.value = card.question;
+          aInput.value = card.answer;
+          tagInput.value = card.tag;
+          modalTitle.textContent = 'Edit Flashcard';
+        }
+      } else {
+        form.reset();
+        idInput.value = '';
+        modalTitle.textContent = 'Create New Flashcard';
+      }
+
+      modal.classList.remove('hidden');
+      qInput.focus();
+      lucide.createIcons();
+    }
+
+    function closeCardModal() {
+      document.getElementById('card-modal').classList.add('hidden');
+    }
+
+    function handleCardFormSubmit(e) {
+      e.preventDefault();
+      const id = document.getElementById('card-edit-id').value;
+      const question = document.getElementById('card-question-input').value.trim();
+      const answer = document.getElementById('card-answer-input').value.trim();
+      const tag = document.getElementById('card-tag-input').value.trim() || 'General';
+
+      if (!question || !answer) return;
+
+      if (id) {
+        const card = deck.find(c => c.id === id);
+        if (card) {
+          card.question = question;
+          card.answer = answer;
+          card.tag = tag;
+          showToast('Flashcard updated', 'success');
+        }
+      } else {
+        deck.unshift({
+          id: 'card_' + Date.now(),
+          question,
+          answer,
+          tag,
+          mastered: false
+        });
+        showToast('New flashcard added!', 'success');
+      }
+
+      playAudioTone('success');
+      saveDeckToStorage();
+      closeCardModal();
+      renderFilterTags();
+      renderCurrentView();
+    }
+
+    function promptDeleteCard(cardId) {
+      cardPendingDeleteId = cardId;
+      document.getElementById('delete-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeDeleteModal() {
+      cardPendingDeleteId = null;
+      document.getElementById('delete-modal').classList.add('hidden');
+    }
+
+    function executeDeleteCard() {
+      if (!cardPendingDeleteId) return;
+      deck = deck.filter(c => c.id !== cardPendingDeleteId);
+      flippedCardIds.delete(cardPendingDeleteId);
+      saveDeckToStorage();
+      closeDeleteModal();
+      renderFilterTags();
+      renderCurrentView();
+      showToast('Flashcard removed', 'info');
+    }
+
+    function openThemeModal() {
+      document.getElementById('theme-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeThemeModal() {
+      document.getElementById('theme-modal').classList.add('hidden');
+    }
+
+    function applyThemePreset(presetKey, notify = true) {
+      const theme = THEMES[presetKey];
+      if (!theme) return;
+
+      const root = document.documentElement;
+      root.style.setProperty('--bg-gradient', theme.bgGradient);
+      root.style.setProperty('--card-front-bg', theme.cardFront);
+      root.style.setProperty('--card-back-bg', theme.cardBack);
+      root.style.setProperty('--card-border', theme.cardBorder);
+      root.style.setProperty('--card-text-front', theme.textFront);
+      root.style.setProperty('--card-text-back', theme.textBack);
+      root.style.setProperty('--accent-color', theme.accent);
+
+      localStorage.setItem('flashmaster_theme', presetKey);
+      if (notify) {
+        playAudioTone('flip');
+        showToast(`Theme: ${presetKey.replace('-', ' ').toUpperCase()}`, 'success');
+      }
+    }
+
+    function applyCustomBackground() {
+      const bgStart = document.getElementById('custom-bg-start').value;
+      const bgEnd = document.getElementById('custom-bg-end').value;
+      const cardFront = document.getElementById('custom-card-front').value;
+      const cardBack = document.getElementById('custom-card-back').value;
+
+      document.getElementById('custom-bg-start-val').textContent = bgStart;
+      document.getElementById('custom-bg-end-val').textContent = bgEnd;
+      document.getElementById('custom-card-front-val').textContent = cardFront;
+      document.getElementById('custom-card-back-val').textContent = cardBack;
+
+      const root = document.documentElement;
+      root.style.setProperty('--bg-gradient', `radial-gradient(circle at 20% 20%, ${bgEnd} 0%, ${bgStart} 80%)`);
+      root.style.setProperty('--card-front-bg', cardFront);
+      root.style.setProperty('--card-back-bg', cardBack);
+
+      localStorage.removeItem('flashmaster_theme');
+      playAudioTone('flip');
+      showToast('Custom colors applied!', 'success');
+    }
+
+    function openSettingsModal() {
+      document.getElementById('settings-modal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeSettingsModal() {
+      document.getElementById('settings-modal').classList.add('hidden');
+    }
+
+    function saveCustomApiKey() {
+      const key = document.getElementById('custom-api-key-input').value.trim();
+      if (key) {
+        localStorage.setItem('flashmaster_gemini_key', key);
+        showToast('Gemini API key saved in browser storage', 'success');
+      } else {
+        localStorage.removeItem('flashmaster_gemini_key');
+        showToast('Custom key cleared. Using runtime configuration.', 'info');
+      }
+      closeSettingsModal();
+    }
+
+    function handleGlobalKeydown(e) {
+      const activeTag = document.activeElement ? document.activeElement.tagName : '';
+      if (activeTag === 'INPUT' || activeTag === 'TEXTAREA') {
+        if (e.key === 'Escape') {
+          closeCardModal();
+          closeThemeModal();
+          closeSettingsModal();
+          closeDeleteModal();
+          closeShareModal();
+          closeImportModal();
+          closeFontModal();
+        }
+        return;
+      }
+
+      if (e.key === 'Escape') {
+        closeCardModal();
+        closeThemeModal();
+        closeSettingsModal();
+        closeDeleteModal();
+        closeShareModal();
+        closeImportModal();
+        closeFontModal();
+        return;
+      }
+
+      // Font size keyboard quick adjustments (+ and -) when not in input
+      if (e.key === '+' || e.key === '=') {
+        e.preventDefault();
+        stepFontSize(2);
+      } else if (e.key === '-' || e.key === '_') {
+        e.preventDefault();
+        stepFontSize(-2);
+      }
+
+      if (activeView === 'study') {
+        if (e.code === 'Space') {
+          e.preventDefault();
+          toggleStudyCardFlip();
+        } else if (e.key === 'ArrowLeft') {
+          e.preventDefault();
+          studyNav(-1);
+        } else if (e.key === 'ArrowRight') {
+          e.preventDefault();
+          studyNav(1);
+        } else if (e.key.toLowerCase() === 'm') {
+          toggleCurrentMastery();
+        }
+      }
+    }
+
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      let borderClass = 'border-white/10 text-white';
+      let icon = 'info';
+
+      if (type === 'success') {
+        borderClass = 'border-emerald-500/30 text-emerald-200';
+        icon = 'check-circle';
+      } else if (type === 'info') {
+        borderClass = 'border-indigo-500/30 text-indigo-200';
+        icon = 'info';
+      }
+
+      toast.className = `flex items-center space-x-2 px-3.5 py-2.5 rounded-xl bg-slate-900/95 backdrop-blur-md border ${borderClass} shadow-xl shadow-black/40 text-xs font-semibold animate-in fade-in slide-in-from-bottom-3 duration-200 pointer-events-auto`;
+      toast.innerHTML = `
+        <i data-lucide="${icon}" class="w-4 h-4 shrink-0"></i>
+        <span>${escapeHtml(message)}</span>
+      `;
+
+      container.appendChild(toast);
+      lucide.createIcons();
+
+      setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        toast.style.transition = 'all 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+      }, 2500);
+    }
+
+    function escapeHtml(str) {
+      if (!str) return '';
+      return String(str)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+    }
+
+    window.addEventListener('DOMContentLoaded', initApp);
+  </script>
+</body>
+</html>
